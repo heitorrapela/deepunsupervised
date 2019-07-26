@@ -120,17 +120,15 @@ class SOM(nn.Module):
         output_file.write(content)
         output_file.close()
 
-
-    def cluster_classify(self, dataloader):
-        clustering_classify = pd.DataFrame(columns=['sample_ind', 'cluster', 'class'])
+    def cluster(self, dataloader):
+        clustering = pd.DataFrame(columns=['sample_ind', 'cluster'])
         for batch_idx, (inputs, targets) in enumerate(dataloader):
 
             _, bmu_indexes =  self.forward(inputs.to(self.device))
-            ind_max = torch.argmax(bmu_indexes)
+            ind_max = bmu_indexes.item()
 
-            clustering_classify = clustering_classify.append({'sample_ind': batch_idx,
-                                                              'cluster': ind_max.item(),
-                                                              'class': 0},#self.classes[ind_max].item()},
-                                                             ignore_index=True)
+            clustering = clustering.append({'sample_ind': batch_idx,
+                                            'cluster': ind_max},
+                                           ignore_index=True)
 
-        return clustering_classify
+        return clustering
