@@ -12,6 +12,15 @@ import os
 import argparse
 import numpy as np
 
+def read_lines(file_path):
+    if os.path.isfile(file_path):
+        data = open(file_path, 'r')
+        data = np.array(data.read().splitlines())
+    else:
+        data = []
+
+    return data
+
 def argumentParser():
 	# Set args
 	parser = argparse.ArgumentParser(description='Self Organizing Map')
@@ -33,11 +42,7 @@ if __name__ == '__main__':
 	epochs = args.epochs 
 	device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
-	# Varia de acordo com o dataset ou features, deixei assim por enquanto :)
-	som_input_height = 28
-	som_input_width = 28
-	som_input_deep = 1
-	som_input_dim = som_input_height*som_input_width*som_input_deep
+
 
 	transform = transforms.Compose(
 		[transforms.ToTensor()]
@@ -49,11 +54,27 @@ if __name__ == '__main__':
 	if(dataset == "mnist"):
 		train_data = datasets.MNIST(root='Datasets/',train=True, download=True, transform=transform)
 		train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=True)
+		som_input_height = 28
+		som_input_width = 28
+		som_input_deep = 1
+
 	elif(dataset == "fashion"):
 		train_data = datasets.FashionMNIST(root='Datasets/',train=True, download=True, transform=transform)
 		train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=True)
+		som_input_height = 28
+		som_input_width = 28
+		som_input_deep = 1
 	elif(dataset == "custom"):
-		test = 'a'
+		## Custom data
+		train = 'Datasets/Realdata/breast.arff'
+		train_data = ArffDataset(train)
+		train_loader = DataLoader(train_data,batch_size=batch_size,shuffle=True)
+		som_input_height = 33
+		som_input_width = 1
+		som_input_deep = 1
+
+	# Varia de acordo com o dataset ou features, deixei assim por enquanto :)
+	som_input_dim = som_input_height*som_input_width*som_input_deep
 
 	som = SOM(input_size=som_input_dim, out_size=(args.row,args.col))
 	som = som.to(device)
@@ -61,11 +82,11 @@ if __name__ == '__main__':
 	for epoch in range(epochs):
 		for batch_idx, (data, target) in enumerate(train_loader):
 			data, target = data.to(device), target.to(device)
+			print(data.shape)
 			som_loss = som.forward(data) # Se quiser adicionar a loss com outra
-			som.self_organizing(data.view(-1, som_input_height * som_input_width * som_input_deep), epoch, epochs) # Faz forward e ajuste
-
+			som.self_organizing(data.view(-1, som_input_dim), epoch, epochs) # Faz forward e ajuste
+			#exit(0)
 			if batch_idx % args.loginterval == 0:
 				print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss SOM: {:.6f}'.format(
 				epoch, batch_idx * len(data), len(train_loader.dataset),
 				100. * batch_idx / len(train_loader), som_loss))
-
