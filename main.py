@@ -7,6 +7,10 @@ import torch.optim as optim
 import torchvision.datasets as datasets
 import torchvision.transforms as transforms
 from torch.utils.data.dataloader import DataLoader
+from sklearn.metrics.cluster import adjusted_rand_score
+from sklearn.metrics.cluster import completeness_score
+from sklearn.metrics.cluster import homogeneity_score
+from sklearn.metrics.cluster import v_measure_score
 
 import os
 import argparse
@@ -99,4 +103,12 @@ if __name__ == '__main__':
 				100. * batch_idx / len(train_loader), som_loss))
 
 	## Need to change train loader to test loader...
-	som.write_output(dataset +  ".results",som.cluster(test_loader))
+	cluster_result, predict_labels,true_labels = som.cluster(test_loader)
+	som.write_output(dataset +  ".results",cluster_result)
+	#print(np.asarray(predict_labels).shape,np.asarray(true_labels).shape)
+	#print(adjusted_rand_score(true_labels,predict_labels))
+	#print(completeness_score(true_labels,predict_labels))
+
+	print("Homogeneity: %0.3f" % homogeneity_score(true_labels,predict_labels))
+	print("Completeness: %0.3f" % completeness_score(true_labels,predict_labels))
+	print("V-measure: %0.3f" % v_measure_score(true_labels,predict_labels))

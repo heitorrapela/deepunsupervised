@@ -122,6 +122,8 @@ class SOM(nn.Module):
 
     def cluster(self, dataloader):
         clustering = pd.DataFrame(columns=['sample_ind', 'cluster'])
+        predict_labels = []
+        true_labels = []
         for batch_idx, (inputs, targets) in enumerate(dataloader):
 
             _, bmu_indexes =  self.forward(inputs.to(self.device))
@@ -130,5 +132,6 @@ class SOM(nn.Module):
             clustering = clustering.append({'sample_ind': batch_idx,
                                             'cluster': ind_max},
                                            ignore_index=True)
-
-        return clustering
+            predict_labels.append(ind_max)
+            true_labels.append(targets.item())
+        return clustering, predict_labels,true_labels 
