@@ -49,10 +49,14 @@ if __name__ == '__main__':
 	
 	train_data = None
 	train_loader = None
+	test_data = None
+	test_loader = None
 
 	if(dataset == "mnist"):
 		train_data = datasets.MNIST(root='Datasets/',train=True, download=True, transform=transform)
 		train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=True)
+		test_data = datasets.MNIST(root='Datasets/',train=False, download=True, transform=transform)
+		test_loader = DataLoader(test_data, batch_size=1, shuffle=False)
 		som_input_height = 28
 		som_input_width = 28
 		som_input_deep = 1
@@ -60,6 +64,8 @@ if __name__ == '__main__':
 	elif(dataset == "fashion"):
 		train_data = datasets.FashionMNIST(root='Datasets/',train=True, download=True, transform=transform)
 		train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=True)
+		test_data = datasets.FashionMNIST(root='Datasets/',train=False, download=True, transform=transform)
+		test_loader = DataLoader(test_data, batch_size=1, shuffle=False)
 		som_input_height = 28
 		som_input_width = 28
 		som_input_deep = 1
@@ -68,6 +74,10 @@ if __name__ == '__main__':
 		train = 'Datasets/Realdata/breast.arff'
 		train_data = ArffDataset(train)
 		train_loader = DataLoader(train_data,batch_size=batch_size,shuffle=True)
+
+		test_data = train_data
+		test_loader = DataLoader(test_data, batch_size=1, shuffle=False)
+
 		som_input_height = 33
 		som_input_width = 1
 		som_input_deep = 1
@@ -89,4 +99,4 @@ if __name__ == '__main__':
 				100. * batch_idx / len(train_loader), som_loss))
 
 	## Need to change train loader to test loader...
-	som.write_output(dataset +  ".results",som.cluster_classify(train_loader))
+	som.write_output(dataset +  ".results",som.cluster(test_loader))
