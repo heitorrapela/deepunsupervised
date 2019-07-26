@@ -41,8 +41,7 @@ if __name__ == '__main__':
 	batch_size = args.batch_size
 	epochs = args.epochs 
 	device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-
-
+	use_cuda = True
 
 	transform = transforms.Compose(
 		[transforms.ToTensor()]
@@ -76,17 +75,18 @@ if __name__ == '__main__':
 	# Varia de acordo com o dataset ou features, deixei assim por enquanto :)
 	som_input_dim = som_input_height*som_input_width*som_input_deep
 
-	som = SOM(input_size=som_input_dim, out_size=(args.row,args.col))
+	som = SOM(input_size=som_input_dim, out_size=(args.row,args.col),use_cuda=use_cuda)
 	som = som.to(device)
 
 	for epoch in range(epochs):
 		for batch_idx, (data, target) in enumerate(train_loader):
 			data, target = data.to(device), target.to(device)
-			print(data.shape)
-			som_loss = som.forward(data) # Se quiser adicionar a loss com outra
+			som_loss, _ = som.forward(data) # Se quiser adicionar a loss com outra
 			som.self_organizing(data.view(-1, som_input_dim), epoch, epochs) # Faz forward e ajuste
-			#exit(0)
 			if batch_idx % args.loginterval == 0:
 				print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss SOM: {:.6f}'.format(
 				epoch, batch_idx * len(data), len(train_loader.dataset),
 				100. * batch_idx / len(train_loader), som_loss))
+
+	## Need to change train loader to test loader...
+	som.write_output(dataset +  ".results",som.cluster_classify(train_loader))
