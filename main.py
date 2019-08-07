@@ -38,11 +38,6 @@ if __name__ == '__main__':
 	device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 	use_cuda = True
 
-	train_data = None
-	train_loader = None
-	test_data = None
-	test_loader = None
-
 	data = Datasets(dataset=dataset, root_folder=root)
 
 	som_input_height = 28
@@ -66,12 +61,12 @@ if __name__ == '__main__':
 					100. * batch_idx / len(data.train_loader), som_loss))
 
 	## Need to change train loader to test loader...
-	cluster_result, predict_labels,true_labels = som.cluster(test_loader)
-	som.write_output(dataset +  ".results",cluster_result)
+	cluster_result, predict_labels, true_labels = som.cluster(data.test_loader)
+	som.write_output(dataset + ".results", cluster_result)
 	#print(np.asarray(predict_labels).shape,np.asarray(true_labels).shape)
 	#print(adjusted_rand_score(true_labels,predict_labels))
 	#print(completeness_score(true_labels,predict_labels))
 
-	print("Homogeneity: %0.3f" % homogeneity_score(true_labels,predict_labels))
-	print("Completeness: %0.3f" % completeness_score(true_labels,predict_labels))
-	print("V-measure: %0.3f" % v_measure_score(true_labels,predict_labels))
+	print("Homogeneity: %0.3f" % homogeneity_score(true_labels, predict_labels))
+	print("Completeness: %0.3f" % completeness_score(true_labels, predict_labels))
+	print("V-measure: %0.3f" % v_measure_score(true_labels, predict_labels))
