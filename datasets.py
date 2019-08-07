@@ -4,6 +4,7 @@ import torch
 import pandas as pd
 
 from scipy.io import arff
+from sklearn import preprocessing
 from torch.utils.data import Dataset
 import torchvision.datasets as datasets
 import torchvision.transforms as transforms
@@ -24,8 +25,20 @@ class Datasets(Dataset):
         elif dataset == "fashion":
             data = datasets.FashionMNIST(root=root_folder, train=True, download=True, transform=transform)
             test_data = datasets.FashionMNIST(root=root_folder, train=False, download=True, transform=transform)
+
+        elif dataset == "Ccifar10":
+            data = datasets.CIFAR10(root=root_folder, train=True, download=True, transform=transform)
+            test_data = datasets.CIFAR10(root=root_folder, train=False, download=True, transform=transform)
+
+        elif dataset == "cifar100":
+            data = datasets.CIFAR100(root=root_folder, train=True, download=True, transform=transform)
+            test_data = datasets.CIFAR100(root=root_folder, train=False, download=True, transform=transform)
+
+        elif dataset == "svhn":
+            data = datasets.SVHN(root=root_folder, train=True, download=True, transform=transform)
+            test_data = datasets.SVHN(root=root_folder, train=False, download=True, transform=transform)
         else:
-            data = CustomDataset(load_path=join(root_folder, dataset))
+            data = CustomDataset(load_path=join(root_folder, dataset), norm="minmax")
             test_data = data
 
         self.train_loader = DataLoader(data, batch_size=batch_size, shuffle=True)
@@ -34,7 +47,7 @@ class Datasets(Dataset):
 
 class CustomDataset(Dataset):
 
-    def __init__(self, load_path):
+    def __init__(self, load_path, norm=None):
 
         if load_path.endswith(".arff"):
             data, meta = arff.loadarff(load_path)
@@ -42,6 +55,17 @@ class CustomDataset(Dataset):
         else:
             data = pd.read_csv(load_path, sep=",", header=None)
             data = pd.DataFrame(data, dtype=float)
+
+        if norm is not None:
+            if norm == 'minmax':
+                min_max_scaler = preprocessing.MinMaxScaler().fit(data)
+                data = min_max_scaler.transform(data)
+
+            elif norm == 'scaler':
+                scaler = preprocessing.StandardScaler().fit(data)
+                data = scaler.transform(data)
+
+        data = pd.DataFrame(data, dtype=float)
 
         self.y = data.iloc[:, -1].values
 

@@ -17,12 +17,10 @@ import numpy as np
 def argument_parser():
 	# Set args
 	parser = argparse.ArgumentParser(description='Self Organizing Map')
-	parser.add_argument('--dataset', type=str, default='mnist', help='Dataset Name')
-	parser.add_argument('--root', type=str, default='Datasets', help='Dataset Root folder')
-	parser.add_argument('--batch_size', type=int, default=32, help='input batch size')
+	parser.add_argument('--dataset', type=str, default='breast.arff', help='Dataset Name')
+	parser.add_argument('--root', type=str, default='Datasets/Realdata', help='Dataset Root folder')
+	parser.add_argument('--batch-size', type=int, default=1, help='input batch size')
 	parser.add_argument('--epochs', type=int, default=3, help='input total epoch')
-	parser.add_argument('--row', type=int, default=10, help='set SOM row length')
-	parser.add_argument('--col', type=int, default=10, help='set SOM col length')
 	parser.add_argument('--loginterval', type=int, default=1, help='Log Interval')
 	return parser.parse_args()
 
@@ -40,21 +38,20 @@ if __name__ == '__main__':
 
 	data = Datasets(dataset=dataset, root_folder=root)
 
-	som_input_height = 28
-	som_input_width = 28
+	som_input_height = 33
+	som_input_width = 1
 	som_input_deep = 1
 
 	# Varia de acordo com o dataset ou features, deixei assim por enquanto :)
 	som_input_dim = som_input_height*som_input_width*som_input_deep
 
-	som = SOM(input_size=som_input_dim, out_size=(args.row, args.col), use_cuda=use_cuda)
+	som = SOM(input_size=som_input_dim)
 	som = som.to(device)
 
 	for epoch in range(epochs):
 		for batch_idx, (sample, target) in enumerate(data.train_loader):
 			sample, target = sample.to(device), target.to(device)
-			som_loss, _ = som.forward(sample)  # Se quiser adicionar a loss com outra
-			som.self_organizing(sample.view(-1, som_input_dim), epoch, epochs)  # Faz forward e ajuste
+			som_loss, _ = som.self_organizing(sample, epoch, epochs)  # Faz forward e ajuste
 			if batch_idx % args.loginterval == 0:
 				print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss SOM: {:.6f}'.format(
 					epoch, batch_idx * len(sample), len(data.train_loader.dataset),
