@@ -6,8 +6,7 @@ import re
 
 
 class SOM(nn.Module):
-    def __init__(self, input_size, out_size=100, lr=0.3, sigma=None, dsbeta=0.0001, eps_ds=0.01,
-                 use_cuda=False):
+    def __init__(self, input_size, out_size=100, lr=0.3, sigma=None, dsbeta=0.0001, eps_ds=0.01, device='cpu'):
         '''
         :param input_size:
         :param out_size:
@@ -30,8 +29,7 @@ class SOM(nn.Module):
 
         self.dsbeta = dsbeta
         self.eps_ds = eps_ds
-        self.device = torch.device("cuda:0" if use_cuda else "cpu")
-
+        self.device = torch.device(device)
         self.weights = nn.Parameter(torch.zeros(out_size, input_size, device=self.device), requires_grad=False)
         self.moving_avg = nn.Parameter(torch.zeros(out_size, input_size, device=self.device), requires_grad=False)
         self.relevance = nn.Parameter(torch.ones(out_size, input_size, device=self.device), requires_grad=False)
@@ -158,7 +156,6 @@ class SOM(nn.Module):
         predict_labels = []
         true_labels = []
         for batch_idx, (inputs, targets) in enumerate(dataloader):
-
             _, bmu_indexes = self.forward(inputs.to(self.device))
             ind_max = bmu_indexes.item()
 
