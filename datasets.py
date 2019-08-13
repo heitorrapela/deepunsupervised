@@ -65,6 +65,8 @@ class CustomDataset(data.Dataset):
             loaded_mat = pd.read_csv(load_path, sep=",", header=None)
             loaded_mat = pd.DataFrame(loaded_mat, dtype=float)
 
+        self.labels = loaded_mat.iloc[:, -1].values
+
         if norm is not None:
             if norm == 'minmax':
                 min_max_scaler = preprocessing.MinMaxScaler().fit(loaded_mat)
@@ -75,8 +77,6 @@ class CustomDataset(data.Dataset):
                 loaded_mat = scaler.transform(loaded_mat)
 
         loaded_mat = pd.DataFrame(loaded_mat, dtype=float)
-
-        self.labels = loaded_mat.iloc[:, -1].values
 
         self.data = loaded_mat.iloc[:, :-1]
 
