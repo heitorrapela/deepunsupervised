@@ -9,6 +9,7 @@ from torch.utils.data.dataloader import DataLoader
 from sklearn.metrics.cluster import completeness_score
 from sklearn.metrics.cluster import homogeneity_score
 from sklearn.metrics.cluster import v_measure_score
+from os.path import join
 
 import os
 import argparse
@@ -38,10 +39,8 @@ if __name__ == '__main__':
 	batch_size = args.batch_size
 	epochs = args.epochs 
 
-	if not os.path.exists(args.out_folder + args.dataset.split(".arff")[0]):
-	    os.makedirs(args.out_folder + args.dataset.split(".arff")[0])
-
-
+	if not os.path.exists(join(args.out_folder, args.dataset.split(".arff")[0])):
+		os.makedirs(join(args.out_folder, args.dataset.split(".arff")[0]))
 
 	device = torch.device('cuda:0' if (torch.cuda.is_available() and args.cuda) else 'cpu')
 	dataset = Datasets(dataset=dataset_path, root_folder=root)
@@ -63,7 +62,11 @@ if __name__ == '__main__':
 
 	## Need to change train loader to test loader...
 	cluster_result, predict_labels, true_labels = som.cluster(test_loader)
-	som.write_output(args.out_folder + args.dataset.split(".arff")[0] + '/' + args.dataset.split(".arff")[0].split("/")[-1] + ".results", cluster_result)
+	som.write_output(join(args.out_folder,
+						  join(args.dataset.split(".arff")[0], args.dataset.split(".arff")[0] + ".results")),
+					 cluster_result)
+
+	# args.dataset.split(".arff")[0].split("/")[-1] + ".results", cluster_result)
 	#print(np.asarray(predict_labels).shape,np.asarray(true_labels).shape)
 	#print(adjusted_rand_score(true_labels,predict_labels))
 	#print(completeness_score(true_labels,predict_labels))
