@@ -54,7 +54,7 @@ if __name__ == '__main__':
 	for epoch in range(epochs):
 		for batch_idx, (sample, target) in enumerate(train_loader):
 			sample, target = sample.to(device), target.to(device)
-			som_loss, _ = som.self_organizing(sample, epoch, epochs)  # Faz forward e ajuste
+			som_loss, _ = som.self_organize(sample, epoch, epochs)  # Faz forward e ajuste
 			if batch_idx % args.loginterval == 0:
 				print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss SOM: {:.6f}'.format(
 					epoch, batch_idx * len(sample), len(train_loader.dataset),

@@ -6,12 +6,12 @@ import re
 
 
 class SOM(nn.Module):
-    def __init__(self, input_size, out_size=100, lr=0.3, sigma=None, dsbeta=0.0001, eps_ds=0.01, device='cpu'):
+    def __init__(self, input_size, out_size=10, lr=0.3, at=0.95, dsbeta=0.0001, eps_ds=0.01, device='cpu'):
         '''
         :param input_size:
         :param out_size:
         :param lr:
-        :param sigma:
+        :param at:
         :param dsbeta:
         :param eps_ds:
         :param use_cuda:
@@ -21,15 +21,13 @@ class SOM(nn.Module):
         self.input_size = input_size
         self.out_size = out_size
         self.lr = lr
-
-        if sigma is None:
-            self.sigma = np.sqrt(out_size) / 2
-        else:
-            self.sigma = float(sigma)
+        self.at = at
 
         self.dsbeta = dsbeta
         self.eps_ds = eps_ds
         self.device = torch.device(device)
+
+        self.node_control = nn.Parameter(torch.zeros(out_size, device=self.device), requires_grad=False)
         self.weights = nn.Parameter(torch.zeros(out_size, input_size, device=self.device), requires_grad=False)
         self.moving_avg = nn.Parameter(torch.zeros(out_size, input_size, device=self.device), requires_grad=False)
         self.relevance = nn.Parameter(torch.ones(out_size, input_size, device=self.device), requires_grad=False)
@@ -51,12 +49,6 @@ class SOM(nn.Module):
 
         return dist_weight
 
-    def relevance_distance(self, x1, x2):
-        if x1.dim() == 1:
-            x1 = x1.unsqueeze(0)
-
-        return self.pairwise_distance(x1, x2)
-
     def pairwise_distance(self, x1, x2=None):
 
         x1_norm = (x1 ** 2).sum(1).view(-1, 1)
@@ -66,8 +58,6 @@ class SOM(nn.Module):
 
         dist = x1_norm + x2_norm - 2.0 * torch.mm(x1, x2_t)
 
-        dist[dist != dist] = 0  # replace nan values with 0
-
         return dist
 
     def update_node(self, w, lr, index):
@@ -75,14 +65,9 @@ class SOM(nn.Module):
         self.moving_avg[index] = torch.mul(lr * self.dsbeta, distance) + torch.mul(1 - lr * self.dsbeta,
                                                                                    self.moving_avg[index])
 
-        if len(index.size()) == 0:  # len(index.size()) == 0 means that it is a scalar tensor
-            maximum = torch.max(self.moving_avg[index])
-            minimum = torch.min(self.moving_avg[index])
-            avg = torch.mean(self.moving_avg[index])
-        else:
-            maximum = torch.max(self.moving_avg[index], 1)[0].unsqueeze(1)
-            minimum = torch.min(self.moving_avg[index], 1)[0].unsqueeze(1)
-            avg = torch.mean(self.moving_avg[index], 1).unsqueeze(1)
+        maximum = torch.max(self.moving_avg[index], dim=1, keepdim=True)[0]
+        minimum = torch.min(self.moving_avg[index], dim=1, keepdim=True)[0]
+        avg = torch.mean(self.moving_avg[index], dim=1, keepdim=True)[0]
 
         one_tensor = torch.tensor(1, dtype=torch.float, device=self.device)
 
@@ -90,7 +75,6 @@ class SOM(nn.Module):
                                           one_tensor + torch.exp(torch.div(torch.sub(self.moving_avg[index], avg),
                                                                            torch.mul(self.eps_ds,
                                                                                      torch.sub(maximum, minimum)))))
-        self.relevance[self.relevance != self.relevance] = 1.  # if (max - min) == 0 then set to 1
 
         delta = torch.mul(lr, torch.sub(w, self.weights[index]))
         self.weights[index] = torch.add(self.weights[index], delta)
@@ -106,17 +90,15 @@ class SOM(nn.Module):
         '''
         batch_size = input.size(0)
 
-        losses, indexes_max = self.update_map(input, lr)
+        activations = self.activation(input)
+        act_max, indexes_max = torch.max(activations, dim=1)
+
+
+        losses = self.update_node(input, lr, indexes_max)
 
         return losses.sum().div_(batch_size), indexes_max
 
-    def update_map(self, w, lr):
-        activations = self.activation(w)
-        indexes_max = torch.argmax(activations, dim=1)
-
-        return self.update_node(w, lr, indexes_max), indexes_max
-
-    def self_organizing(self, input, current_iter, max_iter):
+    def self_organize(self, input, current_iter, max_iter):
         '''
         Train the Self Oranizing Map(SOM)
         :param input: training data
@@ -124,13 +106,8 @@ class SOM(nn.Module):
         :param max_iter: total epoch
         :return: loss, location of best matching unit
         '''
-
-        # Set learning rate
-        iter_correction = 1.0 - current_iter / max_iter
-        lr = self.lr * iter_correction
-
         # Find best matching unit
-        loss, bmu_indexes = self.forward(input, lr)
+        loss, bmu_indexes = self.forward(input, self.lr)
 
         return loss, bmu_indexes
 
