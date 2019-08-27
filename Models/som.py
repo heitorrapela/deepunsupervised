@@ -6,7 +6,7 @@ import re
 
 
 class SOM(nn.Module):
-    def __init__(self, input_size, out_size=10, lr=0.3, at=0.95, dsbeta=0.0001, eps_ds=0.01, device='cpu'):
+    def __init__(self, input_size, out_size=10, lr=0.3, at=0.9, dsbeta=0.0001, eps_ds=0.01, device='cpu'):
         '''
         :param input_size:
         :param out_size:
@@ -88,17 +88,39 @@ class SOM(nn.Module):
         :param lr: learning rate
         :return: loss, location of best matching unit
         '''
+
         batch_size = input.size(0)
 
         activations = self.activation(input)
         act_max, indexes_max = torch.max(activations, dim=1)
 
 
+        bool_high_at = act_max >= self.at
+        samples_high_at = input[bool_high_at]
+        nodes_high_at = indexes_max[bool_high_at]
+        self.node_control[nodes_high_at] = 1.
+        updatable_samples_hight_at = self.unique_node_diff_vectorized(nodes_high_at, samples_high_at)
+
+        bool_low_at = act_max < self.at
+        samples_low_at = input[bool_low_at]
+        nodes_low_at = indexes_max[bool_low_at]
+        updatable_samples_low_at = self.unique_node_diff_vectorized(nodes_low_at, samples_low_at)
+
         losses = self.update_node(input, lr, indexes_max)
 
         return losses.sum().div_(batch_size), indexes_max
 
-    def self_organize(self, input, current_iter, max_iter):
+    def unique_node_diff_vectorized(self, nodes, samples):
+        unique_nodes, unique_nodes_counts = torch.unique(nodes, return_counts=True)
+        unique_nodes = unique_nodes.view(-1, 1)
+        stack_nodes = torch.stack([nodes] * len(unique_nodes), 0)
+        unique_nodes_idx = stack_nodes == unique_nodes
+        updatable_samples = torch.matmul(samples.t(), unique_nodes_idx.t().float())
+        updatable_samples = torch.div(updatable_samples, unique_nodes_counts.float())
+
+        return updatable_samples
+
+    def self_organize(self, input):
         '''
         Train the Self Oranizing Map(SOM)
         :param input: training data
