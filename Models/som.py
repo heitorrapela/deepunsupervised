@@ -1,11 +1,11 @@
 import torch
 import torch.nn as nn
 import pandas as pd
-import numpy as np
 import re
 
 
 class SOM(nn.Module):
+
     def __init__(self, input_size, out_size=10, lr=0.3, at=0.9, dsbeta=0.0001, eps_ds=0.01, device='cpu'):
         '''
         :param input_size:
@@ -60,9 +60,39 @@ class SOM(nn.Module):
 
         return dist
 
-    def update_node(self, w, lr, index):
+    def add_node(self, new_samples):
+        # number of available nodes in the map
+        n_available = torch.tensor(self.node_control[self.node_control == 0].size(0))
+
+        # number of nodes to be inserted in the map
+        n_new = torch.tensor(new_samples.size(0))
+
+        # feasible number of nodes to be created
+        n_create = torch.min(n_available, n_new)
+
+        # decides the indexes of new samples that will be inserted in fact (less activated to higher activated)
+        max_idx = torch.max(torch.tensor(0), torch.tensor(new_samples.size(0)))
+        min_idx = torch.max(max_idx - n_create, torch.tensor(0))
+        create_idx = torch.arange(start=min_idx, end=max_idx, step=1)
+        new_nodes = new_samples[create_idx]
+
+        available_idx = (self.node_control == 0).nonzero().squeeze()
+
+        n_new_nodes = new_nodes.size(0)
+        new_nodes_idx = available_idx[:n_new_nodes]
+
+        self.node_control[new_nodes_idx] = 1.
+        self.weights[new_nodes_idx] = new_nodes
+        self.moving_avg[new_nodes_idx] = nn.Parameter(torch.zeros(n_new_nodes, self.input_size, device=self.device),
+                                                      requires_grad=False)
+        self.relevance[new_nodes_idx] = nn.Parameter(torch.ones(n_new_nodes, self.input_size, device=self.device),
+                                                     requires_grad=False)
+
+        return new_nodes_idx
+
+    def update_node(self, w, index):
         distance = torch.abs(torch.sub(w, self.weights[index]))
-        self.moving_avg[index] = torch.mul(lr * self.dsbeta, distance) + torch.mul(1 - lr * self.dsbeta,
+        self.moving_avg[index] = torch.mul(self.lr * self.dsbeta, distance) + torch.mul(1 - self.lr * self.dsbeta,
                                                                                    self.moving_avg[index])
 
         maximum = torch.max(self.moving_avg[index], dim=1, keepdim=True)[0]
@@ -76,7 +106,7 @@ class SOM(nn.Module):
                                                                            torch.mul(self.eps_ds,
                                                                                      torch.sub(maximum, minimum)))))
 
-        delta = torch.mul(lr, torch.sub(w, self.weights[index]))
+        delta = torch.mul(self.lr, torch.sub(w, self.weights[index]))
         self.weights[index] = torch.add(self.weights[index], delta)
 
         return delta
@@ -90,35 +120,41 @@ class SOM(nn.Module):
         '''
 
         batch_size = input.size(0)
+        losses = torch.tensor(0)
+        nodes_max = torch.tensor([], dtype=torch.long)
 
         activations = self.activation(input)
         act_max, indexes_max = torch.max(activations, dim=1)
 
-
         bool_high_at = act_max >= self.at
         samples_high_at = input[bool_high_at]
         nodes_high_at = indexes_max[bool_high_at]
-        self.node_control[nodes_high_at] = 1.
-        updatable_samples_hight_at = self.unique_node_diff_vectorized(nodes_high_at, samples_high_at)
+        if len(nodes_high_at) > 0:
+            self.node_control[nodes_high_at] = 1.
+            unique_nodes_high_at, updatable_samples_hight_at = self.unique_node_diff_vectorized(nodes_high_at,
+                                                                                                samples_high_at)
+            losses = self.update_node(updatable_samples_hight_at, nodes_high_at)
+            nodes_max = torch.cat((nodes_max, unique_nodes_high_at.view(-1)))
 
         bool_low_at = act_max < self.at
         samples_low_at = input[bool_low_at]
         nodes_low_at = indexes_max[bool_low_at]
-        updatable_samples_low_at = self.unique_node_diff_vectorized(nodes_low_at, samples_low_at)
+        if len(nodes_low_at) > 0:
+            _, updatable_samples_low_at = self.unique_node_diff_vectorized(nodes_low_at, samples_low_at)
+            new_nodes_idx = self.add_node(updatable_samples_low_at)
+            nodes_max = torch.cat((nodes_max, new_nodes_idx))
 
-        losses = self.update_node(input, lr, indexes_max)
-
-        return losses.sum().div_(batch_size), indexes_max
+        return losses.sum().div_(batch_size), nodes_max
 
     def unique_node_diff_vectorized(self, nodes, samples):
         unique_nodes, unique_nodes_counts = torch.unique(nodes, return_counts=True)
         unique_nodes = unique_nodes.view(-1, 1)
-        stack_nodes = torch.stack([nodes] * len(unique_nodes), 0)
-        unique_nodes_idx = stack_nodes == unique_nodes
+        repeat_nodes = nodes.repeat(len(unique_nodes), 1)
+        unique_nodes_idx = repeat_nodes == unique_nodes
         updatable_samples = torch.matmul(samples.t(), unique_nodes_idx.t().float())
         updatable_samples = torch.div(updatable_samples, unique_nodes_counts.float())
 
-        return updatable_samples
+        return unique_nodes, updatable_samples.t()
 
     def self_organize(self, input):
         '''
