@@ -2,9 +2,6 @@ from Models.som import SOM
 from datasets import Datasets
 
 import torch
-import torch.nn as nn
-import torch.optim as optim
-from sklearn.metrics.cluster import adjusted_rand_score
 from torch.utils.data.dataloader import DataLoader
 from sklearn.metrics.cluster import completeness_score
 from sklearn.metrics.cluster import homogeneity_score
@@ -101,7 +98,7 @@ if __name__ == '__main__':
             # sample = torch.tensor([[1., 1., 1.], [2., 2., 2.], [3., 3., 3.], [4., 4., 4.], [5., 5., 5.]])
             # target = torch.tensor([1, 2, 3, 4, 5])
 
-            som_loss, _ = som.self_organize(sample)  # Faz forward e ajuste
+            som_loss = som.self_organize(sample)  # Faz forward e ajuste
             if batch_idx % args.loginterval == 0:
                 print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss SOM: {:.6f}'.format(
                     epoch, batch_idx * len(sample), len(train_loader.dataset),
@@ -109,6 +106,10 @@ if __name__ == '__main__':
 
     ## Need to change train loader to test loader...
     cluster_result, predict_labels, true_labels = som.cluster(test_loader)
+
+    if not os.path.exists(join(args.out_folder, args.dataset.split(".arff")[0])):
+        os.makedirs(join(args.out_folder, args.dataset.split(".arff")[0]))
+
     som.write_output(join(args.out_folder,
                           join(args.dataset.split(".arff")[0], args.dataset.split(".arff")[0] + ".results")),
                      cluster_result)
