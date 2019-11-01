@@ -13,7 +13,7 @@ from os.path import join
 
 class Datasets(data.Dataset):
 
-    def __init__(self, dataset, root_folder="Datasets/"):
+    def __init__(self, dataset, root_folder="raw-dataloaders/"):
         super(Datasets, self).__init__()
 
         transform = transforms.Compose([transforms.ToTensor(),

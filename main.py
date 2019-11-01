@@ -1,7 +1,10 @@
-from Models.som import SOM
-from datasets import Datasets
+# Author: Pedro Braga <phmb4@cin.ufpe.br>.
 
 import torch
+
+from models.som import SOM
+from dataloaders.datasets import Datasets
+
 from torch.utils.data.dataloader import DataLoader
 from sklearn.metrics.cluster import completeness_score
 from sklearn.metrics.cluster import homogeneity_score
@@ -29,9 +32,9 @@ def argument_parser():
     parser.add_argument('--workers', type=int, help='number of data loading workers', default=0)
     parser.add_argument('--ngpu', type=int, default=1, help='number of GPUs to use')
 
-    parser.add_argument('--root', type=str, default='Datasets/', help='Dataset Root folder')
+    parser.add_argument('--root', type=str, default='raw-dataloaders/', help='Dataset Root folder')
     parser.add_argument('--dataset', type=str, default='mnist', help='Dataset Name')
-    parser.add_argument('--out-folder', type=str, default='Results/', help='Folder to output results')
+    parser.add_argument('--out-folder', type=str, default='results/', help='Folder to output results')
     parser.add_argument('--batch-size', type=int, default=1, help='input batch size')
     parser.add_argument('--epochs', type=int, default=3, help='input total epoch')
     parser.add_argument('--loginterval', type=int, default=1, help='Log Interval')
@@ -88,7 +91,7 @@ if __name__ == '__main__':
     test_loader = DataLoader(dataset.test_data, shuffle=False)
 
     # som = SOM(input_size=3, device=device)
-    som = SOM(input_size=dataset.dim_flatten, device=device)
+    som = SOM(input_dim=dataset.dim_flatten, device=device)
     som = som.to(device)
 
     for epoch in range(epochs):

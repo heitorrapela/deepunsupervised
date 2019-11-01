@@ -1,3 +1,5 @@
+# Author: Pedro Braga <phmb4@cin.ufpe.br>.
+
 import torch
 import torch.nn as nn
 import pandas as pd
@@ -6,10 +8,10 @@ import re
 
 class SOM(nn.Module):
 
-    def __init__(self, input_size, out_size=10, lr=0.3, at=0.9, dsbeta=0.0001, eps_ds=0.01, device='cpu'):
+    def __init__(self, input_dim, n_max=10, lr=0.3, at=0.9, dsbeta=0.0001, eps_ds=0.01, device='cpu'):
         '''
-        :param input_size:
-        :param out_size:
+        :param input_dim:
+        :param n_max:
         :param lr:
         :param at:
         :param dsbeta:
@@ -18,8 +20,8 @@ class SOM(nn.Module):
         '''
 
         super(SOM, self).__init__()
-        self.input_size = input_size
-        self.out_size = out_size
+        self.input_size = input_dim
+        self.out_size = n_max
         self.lr = lr
         self.at = at
 
@@ -27,10 +29,10 @@ class SOM(nn.Module):
         self.eps_ds = eps_ds
         self.device = torch.device(device)
 
-        self.node_control = nn.Parameter(torch.zeros(out_size, device=self.device), requires_grad=False)
-        self.weights = nn.Parameter(torch.zeros(out_size, input_size, device=self.device), requires_grad=False)
-        self.moving_avg = nn.Parameter(torch.zeros(out_size, input_size, device=self.device), requires_grad=False)
-        self.relevance = nn.Parameter(torch.ones(out_size, input_size, device=self.device), requires_grad=False)
+        self.node_control = nn.Parameter(torch.zeros(n_max, device=self.device), requires_grad=False)
+        self.weights = nn.Parameter(torch.zeros(n_max, input_dim, device=self.device), requires_grad=False)
+        self.moving_avg = nn.Parameter(torch.zeros(n_max, input_dim, device=self.device), requires_grad=False)
+        self.relevance = nn.Parameter(torch.ones(n_max, input_dim, device=self.device), requires_grad=False)
 
     def activation(self, w):
         dists = self.weighted_distance(w)
