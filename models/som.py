@@ -4,6 +4,8 @@ import torch
 import torch.nn as nn
 import pandas as pd
 import re
+import models.cnn_mnist #import Net
+
 
 
 class SOM(nn.Module):
@@ -56,6 +58,13 @@ class SOM(nn.Module):
 
         x2_t = torch.transpose(x2, 0, 1)
         x2_norm = (x2 ** 2).sum(1).view(1, -1)
+
+
+        #print(x1_norm.shape)
+        #print(x2_norm.shape)
+        #print(x1.shape)
+        #print(x2_t.shape)
+
 
         dist = x1_norm + x2_norm - 2.0 * torch.mm(x1, x2_t)
 
@@ -137,21 +146,33 @@ class SOM(nn.Module):
         bool_high_at = act_max >= self.at
         samples_high_at = input[bool_high_at]
         nodes_high_at = indexes_max[bool_high_at]
+        
         if len(nodes_high_at) > 0:
             self.node_control[nodes_high_at] = 1.
             unique_nodes_high_at, updatable_samples_hight_at = self.unique_node_diff_vectorized(nodes_high_at,
                                                                                                 samples_high_at)
             losses = self.update_node(updatable_samples_hight_at, unique_nodes_high_at)
 
+
+            print(unique_nodes_high_at)
+            #exit(0)
+
         bool_low_at = act_max < self.at
         samples_low_at = input[bool_low_at]
         nodes_low_at = indexes_max[bool_low_at]
-        # if ther eis nodes to be inserted and positions available in the map
+        
+        # if there is nodes to be inserted and positions available in the map
         if len(nodes_low_at) > 0 and self.node_control[self.node_control == 0].size(0) > 0:
             _, updatable_samples_low_at = self.unique_node_diff_vectorized(nodes_low_at, samples_low_at)
             self.add_node(updatable_samples_low_at)
 
-        return losses.sum().div_(batch_size)
+
+
+
+
+
+
+        return self.weights, self.relevance, losses.sum().div_(batch_size)
 
     def unique_node_diff_vectorized(self, nodes, samples):
         unique_nodes, unique_nodes_counts = torch.unique(nodes, return_counts=True)
@@ -180,8 +201,20 @@ class SOM(nn.Module):
         clustering = pd.DataFrame(columns=['sample_ind', 'cluster'])
         predict_labels = []
         true_labels = []
+
+        use_cuda=False
+        device = torch.device('cuda:0' if use_cuda else 'cpu')
+        model = models.cnn_mnist.Net().to(device)
+        #model.test()
+        #som = SOM(input_dim=800, device=device)
+        #som = som.to(device)
+
+
+
         for batch_idx, (inputs, targets) in enumerate(dataloader):
-            bmu_indexes = self.get_highest_at(inputs.to(self.device))
+            outputs = model(inputs)
+            
+            bmu_indexes = self.get_highest_at(outputs.to(self.device))
             ind_max = bmu_indexes.item()
 
             clustering = clustering.append({'sample_ind': batch_idx,

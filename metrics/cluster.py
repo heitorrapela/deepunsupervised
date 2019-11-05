@@ -1,11 +1,33 @@
-# Author: Pedro Braga <phmb4@cin.ufpe.br>.
-
 import itertools
 import munkres
 import numpy as np
 import pandas as pd
 from scipy.io import arff
 from sklearn.metrics import confusion_matrix as sk_confusion
+
+def homogeneity_score(true_labels, predict_labels):
+    return sklearn.metrics.cluster.homogeneity_score(true_labels, predict_labels)
+
+def completeness_score(true_labels, predict_labels):
+    return sklearn.metrics.cluster.completeness_score(true_labels, predict_labels)
+
+def v_measure_score(true_labels, predict_labels):
+    return sklearn.metrics.cluster.v_measure_score(true_labels, predict_labels)
+
+def clustering_error(confusion_matrix):
+
+    """
+    Calculates the CE (clustering error) of a clustering 
+    represented by its confusion matrix.
+
+    Note: disjoint clustering only, i.e., it only works for data that belong 
+    to exactly one class label.
+    """
+
+    confusion_matrix = maximize_trace(confusion_matrix)
+
+    ce = 1 - np.trace(confusion_matrix) / np.sum(confusion_matrix)
+    return ce
 
 
 def permute_cols(a, inds):

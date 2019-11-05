@@ -12,7 +12,13 @@ from os.path import join
 
 import os
 import argparse
+import numpy as np
 import metrics
+from models.cnn_mnist import Net
+import torch.nn.functional as F
+import torch.optim as optim
+import torch
+import torch.nn as nn
 from utils import utils
 
 
@@ -140,3 +146,90 @@ if __name__ == '__main__':
         for i, train_path in enumerate(input_paths):
             train_som(root=root, dataset_path=train_path, parameters=parameters, device=device, use_cuda=use_cuda,
                       workers=args.workers, out_folder=out_folder, n_max=n_max, epochs=epochs, evaluate=args.eval)
+
+    dataset = Datasets(dataset=dataset_path, root_folder=root)
+    train_loader = DataLoader(dataset.train_data, batch_size=batch_size, shuffle=True)
+    test_loader = DataLoader(dataset.test_data, shuffle=False)
+
+
+    model = Net().to(device)
+
+    # som = SOM(input_size=3, device=device)
+    som = SOM(input_dim=800, device=device)
+    som = som.to(device)
+
+    torch.manual_seed(1)
+    lr = 0.01
+    optimizer = optim.SGD(model.parameters(), lr=lr, momentum=0.5)
+
+    model.train()
+    for epoch in range(epochs):
+        for batch_idx, (sample, target) in enumerate(train_loader):
+            sample, target = sample.to(device), target.to(device)
+            optimizer.zero_grad()
+
+            output_cnn = model(sample)
+            output_som, weights, loss = som(output_cnn)
+            #return updatable_samples_hight_at,unique_nodes_high_at, self.relevance, losses.sum().div_(batch_size)
+            #output = torch.tensor(np.array(output))
+            #print(output.shape)
+            #print(output)
+            #print(target.shape)
+            #print(target)
+            #print(sample.shape)
+            #print(output_cnn.shape)
+            #print(output_som.shape)
+            
+
+            loss = nn.MSELoss()
+            loss = loss(output_som, output_cnn)#torch.transpose(som.weight,0,1),output.unsqueeze(1))
+            #loss.backward()
+            #optimizer.step()
+            #som.self_organizing(output.view(-1, 28 * 28 * 1), epoch, args.epochs+1)
+
+            #print(" AEW ")
+            #exit(0)
+
+
+
+            #loss = F.nll_loss(output, target)
+            
+            '''
+            loss.backward()
+            
+            if batch_idx % args.log_interval == 0:
+                print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
+                    epoch, batch_idx * len(data), len(train_loader.dataset),
+                    100. * batch_idx / len(train_loader), loss.item()))
+            '''
+            # sample = torch.tensor([[1., 1., 1.], [2., 2., 2.], [3., 3., 3.], [4., 4., 4.], [5., 5., 5.]])
+            # target = torch.tensor([1, 2, 3, 4, 5])
+            #print(output.shape)
+            #loss = F.nll_loss(output, target)
+            #loss.backward()#som.self_organize(output)  # Faz forward e ajuste
+            #optimizer.step()
+            if batch_idx % args.loginterval == 0:
+                print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss SOM: {:.6f}'.format(
+                    epoch, batch_idx * len(sample), len(train_loader.dataset),
+                           100. * batch_idx / len(train_loader), loss))
+
+    ## Need to change train loader to test loader...
+
+    cluster_result, predict_labels, true_labels = som.cluster(test_loader)
+
+    if not os.path.exists(join(args.out_folder, args.dataset.split(".arff")[0])):
+        os.makedirs(join(args.out_folder, args.dataset.split(".arff")[0]))
+
+    som.write_output(join(args.out_folder,
+                          join(args.dataset.split(".arff")[0], args.dataset.split(".arff")[0] + ".results")),
+                     cluster_result)
+
+    # args.dataset.split(".arff")[0].split("/")[-1] + ".results", cluster_result)
+	# print(np.asarray(predict_labels).shape,np.asarray(true_labels).shape)
+	# print(adjusted_rand_score(true_labels,predict_labels))
+	# print(completeness_score(true_labels,predict_labels))
+
+    #cluster.teste(true_labels,predict_labels)
+    print("Homogeneity: %0.3f" % metrics.cluster.homogeneity_score(true_labels, predict_labels))
+    print("Completeness: %0.3f" % metrics.cluster.completeness_score(true_labels, predict_labels))
+    print("V-measure: %0.3f" % metrics.cluster.v_measure_score(true_labels, predict_labels))
