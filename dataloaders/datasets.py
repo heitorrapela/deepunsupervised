@@ -13,7 +13,7 @@ from os.path import join
 
 class Datasets(data.Dataset):
 
-    def __init__(self, dataset, root_folder="raw-dataloaders/"):
+    def __init__(self, dataset, root_folder="raw-datasets/"):
         super(Datasets, self).__init__()
 
         transform = transforms.Compose([transforms.ToTensor(),
@@ -21,7 +21,7 @@ class Datasets(data.Dataset):
 
         if dataset == "mnist":
             self.train_data = datasets.MNIST(root=root_folder, train=True, download=True, transform=transform)
-            self.test_data = datasets.MNIST(root=root_folder, train=False, download=True, transform=transform)
+            self.test_data = datasets.MNIST(root=root_folder, train=False, download=True, transfsorm=transform)
             self.dim_flatten = self.train_data.data.size(1) * self.train_data.data.size(2)
 
         elif dataset == "fashion":

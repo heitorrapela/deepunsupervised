@@ -8,20 +8,20 @@ import re
 
 class SOM(nn.Module):
 
-    def __init__(self, input_dim, n_max=10, lr=0.3, at=0.9, dsbeta=0.0001, eps_ds=0.01, device='cpu'):
+    def __init__(self, input_dim, n_max=10, at=0.9, dsbeta=0.0001, lr=0.3, eps_ds=0.01, device='cpu'):
         '''
         :param input_dim:
         :param n_max:
-        :param lr:
         :param at:
         :param dsbeta:
+        :param lr:
         :param eps_ds:
         :param use_cuda:
         '''
 
         super(SOM, self).__init__()
         self.input_size = input_dim
-        self.out_size = n_max
+        self.n_max = n_max
         self.lr = lr
         self.at = at
 
@@ -179,13 +179,14 @@ class SOM(nn.Module):
     def write_output(self, output_path, result):
         output_file = open(output_path, 'w+')
 
-        content = str(self.weights.size(0)) + "\t" + str(self.weights.size(1)) + "\n"
-        self.relevance = nn.Parameter(torch.ones(self.out_size, self.input_size, device=self.device),
-                                      requires_grad=False)
-        for i, relevance in enumerate(self.relevance.cpu()):
-            content += str(i) + "\t" + "\t".join(map(str, relevance.numpy())) + "\n"
+        n_clusters = self.node_control[self.node_control == 1].size(0)
 
-        result_text = result.to_string(header=False, index=False)
+        content = str(n_clusters) + "\t" + str(self.input_size) + "\n"
+        for i, relevance in enumerate(self.relevance):
+            if self.node_control[i] == 1:
+                content += str(i) + "\t" + "\t".join(map(str, relevance.numpy())) + "\n"
+
+        result_text = result.to_string(header=False, index=False).strip()
         result_text = re.sub('\n +', '\n', result_text)
         result_text = re.sub(' +', '\t', result_text)
 
