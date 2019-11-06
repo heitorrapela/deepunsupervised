@@ -157,12 +157,8 @@ if __name__ == '__main__':
 
     model = Net().to(device)
 
-    # som = SOM(input_size=3, device=device)
-    som = SOM(input_dim=800, device=device)
-    som = som.to(device)
-
     torch.manual_seed(1)
-    lr = 0.01
+    lr = 0.000001
     optimizer = optim.SGD(model.parameters(), lr=lr, momentum=0.5)
     loss = nn.MSELoss(reduction='sum')
     
@@ -170,6 +166,8 @@ if __name__ == '__main__':
     model.train()
     for epoch in range(epochs):
         for batch_idx, (sample, target) in enumerate(train_loader):
+
+            #print("id sample: ", batch_idx, " , target:" ,target)
 
             #print("***********************************************************************")
             sample, target = sample.to(device), target.to(device)
@@ -179,7 +177,7 @@ if __name__ == '__main__':
             #samples_high_at, weights_unique_nodes_high_at, loss_som = som(output_cnn)
             #print(sample.shape)
 
-            samples_high_at, weights_unique_nodes_high_at, loss_som = model(sample)
+            samples_high_at, weights_unique_nodes_high_at, loss_som, _ = model(sample)
 
             #return samples_high_at, nodes_high_at, losses.sum().div_(batch_size)
             #return updatable_samples_hight_at,unique_nodes_high_at, self.relevance, losses.sum().div_(batch_size)
@@ -211,7 +209,7 @@ if __name__ == '__main__':
             #    exit(0)
 
             
-            weights_unique_nodes_high_at = weights_unique_nodes_high_at.view(-1,800)
+            weights_unique_nodes_high_at = weights_unique_nodes_high_at.view(-1,2)
             out = loss(weights_unique_nodes_high_at, samples_high_at)#torch.transpose(som.weight,0,1),output.unsqueeze(1))
             #print("------")
             #print(weights_unique_nodes_high_at.shape, samples_high_at.shape)
@@ -253,13 +251,16 @@ if __name__ == '__main__':
                            100. * batch_idx / len(train_loader), out))
 
     ## Need to change train loader to test loader...
+    model.eval()
 
-    cluster_result, predict_labels, true_labels = som.cluster(test_loader)
+    print("Train Finish", flush=True)
+
+    cluster_result, predict_labels, true_labels = model.cluster(test_loader,model)
 
     if not os.path.exists(join(args.out_folder, args.dataset.split(".arff")[0])):
         os.makedirs(join(args.out_folder, args.dataset.split(".arff")[0]))
 
-    som.write_output(join(args.out_folder,
+    model.write_output(join(args.out_folder,
                           join(args.dataset.split(".arff")[0], args.dataset.split(".arff")[0] + ".results")),
                      cluster_result)
 

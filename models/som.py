@@ -10,7 +10,7 @@ import models.cnn_mnist #import Net
 
 class SOM(nn.Module):
 
-    def __init__(self, input_dim, n_max=10, at=0.9, dsbeta=0.0001, lr=0.3, eps_ds=0.01, device='cpu'):
+    def __init__(self, input_dim, n_max=20, lr=0.3, at=0.99, dsbeta=0.0001, eps_ds=0.01, device='cpu'):
         '''
         :param input_dim:
         :param n_max:
@@ -131,7 +131,7 @@ class SOM(nn.Module):
 
         return index_max
 
-    def forward(self, input, lr=0.3):
+    def forward(self, input, lr=0.01):
         '''
         Find the location of best matching unit.
         :param input: data
@@ -154,13 +154,19 @@ class SOM(nn.Module):
         nodes_high_at = indexes_max[bool_high_at]
         
         unique_nodes_high_at = 0
-        updatable_samples_hight_at = nn.Parameter(torch.zeros(1, 800, device=self.device), requires_grad=False)#0
+        updatable_samples_hight_at = nn.Parameter(torch.zeros(1, 2, device=self.device), requires_grad=False)#0
 
         if len(nodes_high_at) > 0:
             self.node_control[nodes_high_at] = 1.
             unique_nodes_high_at, updatable_samples_hight_at = self.unique_node_diff_vectorized(nodes_high_at,
                                                                                                 samples_high_at)
             losses = self.update_node(updatable_samples_hight_at, unique_nodes_high_at)
+            
+            #print("------------- Update Node ----------------")
+            #print("Node:", self.weights[unique_nodes_high_at])
+            #print("Node idx:", unique_nodes_high_at)
+            #print("Samples High at: ", updatable_samples_hight_at)
+            #print("-----------------------------")
 
 
             #print(unique_nodes_high_at)
@@ -173,7 +179,13 @@ class SOM(nn.Module):
         # if there is nodes to be inserted and positions available in the map
         if len(nodes_low_at) > 0 and self.node_control[self.node_control == 0].size(0) > 0:
             _, updatable_samples_low_at = self.unique_node_diff_vectorized(nodes_low_at, samples_low_at)
-            self.add_node(updatable_samples_low_at)
+            
+            idx = self.add_node(updatable_samples_low_at)
+            print("------------- Create Node ----------------")
+            print("Node:", self.weights[idx])
+            print("Node idx:", idx)
+            print("Samples Low at: ", samples_low_at)
+            print("-----------------------------")
 
 
 
@@ -228,13 +240,11 @@ class SOM(nn.Module):
 
         use_cuda=False
         device = torch.device('cuda:0' if use_cuda else 'cpu')
-        model = models.cnn_mnist.Net().to(device)
         #model.test()
         #som = SOM(input_dim=800, device=device)
         #som = som.to(device)
-
         for batch_idx, (inputs, targets) in enumerate(dataloader):
-            outputs = model.forward_cluster(inputs)
+            samples_high_at, weights_unique_nodes_high_at, loss_som, outputs = model(inputs)
             
             bmu_indexes = self.get_highest_at(outputs.to(self.device))
             ind_max = bmu_indexes.item()
@@ -245,17 +255,11 @@ class SOM(nn.Module):
             predict_labels.append(ind_max)
             true_labels.append(targets.item())
 
-        return clustering, predict_labels, true_labels
+            print("----------------------------------------------")
+            print("Saida CNN: ", outputs)
+            print("Prototipo: ", weights_unique_nodes_high_at)
+            print("Index: ", ind_max)
+            print("----------------------------------------------")
 
-
-        for batch_idx, (inputs, targets) in enumerate(dataloader):
-            bmu_indexes = self.get_highest_at(inputs.to(self.device))
-            ind_max = bmu_indexes.item()
-
-            clustering = clustering.append({'sample_ind': batch_idx,
-                                            'cluster': ind_max},
-                                           ignore_index=True)
-            predict_labels.append(ind_max)
-            true_labels.append(targets.item())
 
         return clustering, predict_labels, true_labels

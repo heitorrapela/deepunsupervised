@@ -12,12 +12,12 @@ class Net(nn.Module):
         super(Net, self).__init__()
         self.conv1 = nn.Conv2d(1, 20, 5, 1)
         self.conv2 = nn.Conv2d(20, 50, 5, 1)
-        self.fc1 = nn.Linear(4*4*50, 500)
-        self.fc2 = nn.Linear(500, 10)
+        self.fc1 = nn.Linear(4*4*50, 2)
+        #self.fc2 = nn.Linear(500, 10)
 
-        device = torch.device('cuda:0')#) if False else 'cpu')
+        device = torch.device('cuda:0' if False else 'cpu')
         # som = SOM(input_size=3, device=device)
-        self.som = SOM(input_dim=800, device=device)
+        self.som = SOM(input_dim=2, device=device)
         self.som = self.som.to(device)
 
     def forward(self, x):
@@ -26,6 +26,8 @@ class Net(nn.Module):
         x = F.relu(self.conv2(x))
         x = F.max_pool2d(x, 2, 2)
         x = x.view(-1, 4*4*50)
+        x = self.fc1(x)
+        #x = x.view(-1, 2)
         x = F.log_softmax(x, dim=1)
         #print(x,x.size())
         #weights, relevance, losses = self.som(x)
@@ -39,17 +41,24 @@ class Net(nn.Module):
 
         #print(weights_unique_nodes_high_at.shape, samples_high_at.shape)
 
-        return samples_high_at, weights_unique_nodes_high_at, loss_som#F.log_softmax(x, dim=1)
+        return samples_high_at, weights_unique_nodes_high_at, loss_som, x#F.log_softmax(x, dim=1)
 
+    '''
     def forward_cluster(self, x):
         x = F.relu(self.conv1(x))
         x = F.max_pool2d(x, 2, 2)
         x = F.relu(self.conv2(x))
         x = F.max_pool2d(x, 2, 2)
         x = x.view(-1, 4*4*50)
-        x = F.log_softmax(x, dim=1)
+        #x = F.log_softmax(x, dim=1)
         return x
+    '''
+    def cluster(self, dataloader, model):
+        return self.som.cluster(dataloader, model)
 
+    def write_output(self,output_path,result):
+        print(output_path)
+        self.som.write_output(output_path, result)
 
 
 def train(args, model, device, train_loader, optimizer, epoch):

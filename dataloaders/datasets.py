@@ -34,8 +34,8 @@ class Datasets(data.Dataset):
             self.train_data = datasets.MNIST(root=root_folder, train=True, download=True, transform=transform)
             self.test_data = datasets.MNIST(root=root_folder, train=False, download=True, transform=transform)
 
-            #self.train_data.data = self.train_data.data[:10]
-            #self.test_data.data = self.test_data.data[:10]
+            self.train_data.data = self.train_data.data[:100]
+            self.test_data.data = self.test_data.data[:100]
             #self.dim_flatten = self.train_data.data.size(1) * self.train_data.data.size(2)
 
         elif dataset == "fashion":
