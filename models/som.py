@@ -32,7 +32,7 @@ class SOM(nn.Module):
         self.device = torch.device(device)
 
         self.node_control = nn.Parameter(torch.zeros(n_max, device=self.device), requires_grad=False)
-        self.weights = nn.Parameter(torch.zeros(n_max, input_dim, device=self.device), requires_grad=False)
+        self.weights = nn.Parameter(torch.zeros(n_max, input_dim, device=self.device), requires_grad=True)
         self.moving_avg = nn.Parameter(torch.zeros(n_max, input_dim, device=self.device), requires_grad=False)
         self.relevance = nn.Parameter(torch.ones(n_max, input_dim, device=self.device), requires_grad=False)
 
@@ -92,7 +92,8 @@ class SOM(nn.Module):
         new_nodes_idx = available_idx[:n_new_nodes].t()
 
         self.node_control[new_nodes_idx] = 1.
-        self.weights[new_nodes_idx] = new_nodes
+        with torch.no_grad():
+            self.weights[new_nodes_idx] = new_nodes
         self.moving_avg[new_nodes_idx] = nn.Parameter(torch.zeros(n_new_nodes, self.input_size, device=self.device),
                                                       requires_grad=False)
         self.relevance[new_nodes_idx] = nn.Parameter(torch.ones(n_new_nodes, self.input_size, device=self.device),
@@ -118,8 +119,9 @@ class SOM(nn.Module):
         # if (max - min) == 0 or (mv_avg - avg) == 0 then set to 1
         self.relevance[self.relevance != self.relevance] = 1.
 
-        delta = torch.mul(self.lr, torch.sub(w, self.weights[index]))
-        self.weights[index] = torch.add(self.weights[index], delta)
+        with torch.no_grad():
+            delta = torch.mul(self.lr, torch.sub(w, self.weights[index]))
+            self.weights[index] = torch.add(self.weights[index], delta)
 
         return delta
 
@@ -144,9 +146,16 @@ class SOM(nn.Module):
         act_max, indexes_max = torch.max(activations, dim=1)
 
         bool_high_at = act_max >= self.at
+
+
+        #print("Input shape: ", input.shape)
+
         samples_high_at = input[bool_high_at]
         nodes_high_at = indexes_max[bool_high_at]
         
+        unique_nodes_high_at = 0
+        updatable_samples_hight_at = nn.Parameter(torch.zeros(1, 800, device=self.device), requires_grad=False)#0
+
         if len(nodes_high_at) > 0:
             self.node_control[nodes_high_at] = 1.
             unique_nodes_high_at, updatable_samples_hight_at = self.unique_node_diff_vectorized(nodes_high_at,
@@ -154,7 +163,7 @@ class SOM(nn.Module):
             losses = self.update_node(updatable_samples_hight_at, unique_nodes_high_at)
 
 
-            print(unique_nodes_high_at)
+            #print(unique_nodes_high_at)
             #exit(0)
 
         bool_low_at = act_max < self.at
@@ -168,11 +177,26 @@ class SOM(nn.Module):
 
 
 
+        '''
+        #print(samples_high_at)
+        relevance_sum = torch.sum(self.relevance, 1)
 
+        print("Relevance", len(self.relevance), " ", len(bool_high_at))
 
+        print(len(input), input.shape)
+        #print(input)
+        print(len(bool_low_at), bool_low_at.shape)
+        print("---")
+        print(len(input[bool_low_at]), input[bool_low_at].shape)
+        print("---")
 
+        print(len(relevance_sum), relevance_sum.shape)
+        print(len(bool_high_at), bool_high_at.shape,bool_high_at)
+        print(relevance_sum[bool_high_at])
+        print("...")
+        '''
 
-        return self.weights, self.relevance, losses.sum().div_(batch_size)
+        return updatable_samples_hight_at, self.weights[unique_nodes_high_at], losses.sum().div_(batch_size)
 
     def unique_node_diff_vectorized(self, nodes, samples):
         unique_nodes, unique_nodes_counts = torch.unique(nodes, return_counts=True)
@@ -209,12 +233,23 @@ class SOM(nn.Module):
         #som = SOM(input_dim=800, device=device)
         #som = som.to(device)
 
+        for batch_idx, (inputs, targets) in enumerate(dataloader):
+            outputs = model.forward_cluster(inputs)
+            
+            bmu_indexes = self.get_highest_at(outputs.to(self.device))
+            ind_max = bmu_indexes.item()
+
+            clustering = clustering.append({'sample_ind': batch_idx,
+                                            'cluster': ind_max},
+                                           ignore_index=True)
+            predict_labels.append(ind_max)
+            true_labels.append(targets.item())
+
+        return clustering, predict_labels, true_labels
 
 
         for batch_idx, (inputs, targets) in enumerate(dataloader):
-            outputs = model(inputs)
-            
-            bmu_indexes = self.get_highest_at(outputs.to(self.device))
+            bmu_indexes = self.get_highest_at(inputs.to(self.device))
             ind_max = bmu_indexes.item()
 
             clustering = clustering.append({'sample_ind': batch_idx,

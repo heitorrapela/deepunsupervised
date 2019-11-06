@@ -22,12 +22,20 @@ class Datasets(data.Dataset):
         transform = transforms.Compose([transforms.ToTensor()])
 
 
+
+
         if dataset == "mnist":
+
+            transform=transforms.Compose([
+                transforms.ToTensor(),
+                transforms.Normalize((0.1307,), (0.3081,))
+            ])
+
             self.train_data = datasets.MNIST(root=root_folder, train=True, download=True, transform=transform)
             self.test_data = datasets.MNIST(root=root_folder, train=False, download=True, transform=transform)
 
-            #self.train_data.data = self.train_data.data[:100]
-            #self.test_data.data = self.test_data.data[:100]
+            #self.train_data.data = self.train_data.data[:10]
+            #self.test_data.data = self.test_data.data[:10]
             #self.dim_flatten = self.train_data.data.size(1) * self.train_data.data.size(2)
 
         elif dataset == "fashion":

@@ -15,7 +15,7 @@ class Net(nn.Module):
         self.fc1 = nn.Linear(4*4*50, 500)
         self.fc2 = nn.Linear(500, 10)
 
-        device = torch.device('cuda:0' if False else 'cpu')
+        device = torch.device('cuda:0')#) if False else 'cpu')
         # som = SOM(input_size=3, device=device)
         self.som = SOM(input_dim=800, device=device)
         self.som = self.som.to(device)
@@ -26,13 +26,30 @@ class Net(nn.Module):
         x = F.relu(self.conv2(x))
         x = F.max_pool2d(x, 2, 2)
         x = x.view(-1, 4*4*50)
-
+        x = F.log_softmax(x, dim=1)
         #print(x,x.size())
         #weights, relevance, losses = self.som(x)
         #print(x,x.size())
         #x = F.relu(self.fc1(x))
         #x = self.fc2(x)
-        return F.log_softmax(x, dim=1)#weights, relevance, losses #
+
+        #print(x.shape)
+
+        samples_high_at, weights_unique_nodes_high_at, loss_som = self.som(x)
+
+        #print(weights_unique_nodes_high_at.shape, samples_high_at.shape)
+
+        return samples_high_at, weights_unique_nodes_high_at, loss_som#F.log_softmax(x, dim=1)
+
+    def forward_cluster(self, x):
+        x = F.relu(self.conv1(x))
+        x = F.max_pool2d(x, 2, 2)
+        x = F.relu(self.conv2(x))
+        x = F.max_pool2d(x, 2, 2)
+        x = x.view(-1, 4*4*50)
+        x = F.log_softmax(x, dim=1)
+        return x
+
 
 
 def train(args, model, device, train_loader, optimizer, epoch):

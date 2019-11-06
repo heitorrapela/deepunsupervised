@@ -1,5 +1,8 @@
 # Author: Pedro Braga <phmb4@cin.ufpe.br>.
 
+import os
+os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
+
 import torch
 
 from models.som import SOM
@@ -10,7 +13,7 @@ import random
 from torch.utils.data.dataloader import DataLoader
 from os.path import join
 
-import os
+
 import argparse
 import numpy as np
 import metrics
@@ -161,15 +164,24 @@ if __name__ == '__main__':
     torch.manual_seed(1)
     lr = 0.01
     optimizer = optim.SGD(model.parameters(), lr=lr, momentum=0.5)
-
+    loss = nn.MSELoss(reduction='sum')
+    
+    n = 0
     model.train()
     for epoch in range(epochs):
         for batch_idx, (sample, target) in enumerate(train_loader):
+
+            #print("***********************************************************************")
             sample, target = sample.to(device), target.to(device)
             optimizer.zero_grad()
 
-            output_cnn = model(sample)
-            output_som, weights, loss = som(output_cnn)
+            #output_cnn = model(sample)
+            #samples_high_at, weights_unique_nodes_high_at, loss_som = som(output_cnn)
+            #print(sample.shape)
+
+            samples_high_at, weights_unique_nodes_high_at, loss_som = model(sample)
+
+            #return samples_high_at, nodes_high_at, losses.sum().div_(batch_size)
             #return updatable_samples_hight_at,unique_nodes_high_at, self.relevance, losses.sum().div_(batch_size)
             #output = torch.tensor(np.array(output))
             #print(output.shape)
@@ -179,12 +191,39 @@ if __name__ == '__main__':
             #print(sample.shape)
             #print(output_cnn.shape)
             #print(output_som.shape)
-            
+            #return samples_high_at, nodes_high_at, self.relevance[bool_high_at], losses.sum().div_(batch_size)
+            #return updatable_samples_hight_at, self.weights[unique_nodes_high_at], losses.sum().div_(batch_size)
+            #print(len(samples_high_at),len(nodes_high_at),len(relevance_high_at), loss_som)
 
-            loss = nn.MSELoss()
-            loss = loss(output_som, output_cnn)#torch.transpose(som.weight,0,1),output.unsqueeze(1))
-            #loss.backward()
-            #optimizer.step()
+            #print("------------")
+            #print(samples_high_at)
+            #print("------------")
+            #exit(0)
+            #print(weights_unique_nodes_high_at)
+            #print(weights_unique_nodes_high_at.shape)
+
+
+            #n = n + 1
+            #exit(0)
+            #print(loss_som)
+            #print(samples_high_at)
+            #if(n == 5):
+            #    exit(0)
+
+            
+            weights_unique_nodes_high_at = weights_unique_nodes_high_at.view(-1,800)
+            out = loss(weights_unique_nodes_high_at, samples_high_at)#torch.transpose(som.weight,0,1),output.unsqueeze(1))
+            #print("------")
+            #print(weights_unique_nodes_high_at.shape, samples_high_at.shape)
+            #print(out)
+            #print("------")
+            out.backward()
+            optimizer.step()
+
+
+            #if(n == 5):
+            #    exit(0)
+            #n = n+1
             #som.self_organizing(output.view(-1, 28 * 28 * 1), epoch, args.epochs+1)
 
             #print(" AEW ")
@@ -211,7 +250,7 @@ if __name__ == '__main__':
             if batch_idx % args.loginterval == 0:
                 print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss SOM: {:.6f}'.format(
                     epoch, batch_idx * len(sample), len(train_loader.dataset),
-                           100. * batch_idx / len(train_loader), loss))
+                           100. * batch_idx / len(train_loader), out))
 
     ## Need to change train loader to test loader...
 
