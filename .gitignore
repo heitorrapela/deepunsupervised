@@ -1,6 +1,9 @@
 
 **.results
 raw-datasets/*
+raw-dataloaders/*
+*.txt
+
 # Created by https://www.gitignore.io/api/python,pycharm+all
 # Edit at https://www.gitignore.io/?templates=python,pycharm+all
 
