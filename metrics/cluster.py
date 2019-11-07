@@ -7,7 +7,6 @@ import pandas as pd
 from scipy.io import arff
 from sklearn.metrics import confusion_matrix as sk_confusion
 
-
 def permute_cols(a, inds):
     """
     Permutes the columns of matrix `a` given
@@ -54,7 +53,7 @@ def predict_to_confusion(y_true, y_pred):
     return confusion_matrix(y_true, y_pred)
 
 
-def predict_to_clustering_error(y_true, y_pred):
+def calculate_ce(y_true, y_pred):
     """
     Calculates the clustering error from y_true and y_pred
     """

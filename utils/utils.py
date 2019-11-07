@@ -1,7 +1,17 @@
+import os
 import pandas as pd
 from scipy.io import arff
 from os.path import join
+import numpy as np
 
+def read_lines(file_path):
+    if os.path.isfile(file_path):
+        data = open(file_path, 'r')
+        data = np.array(data.read().splitlines())
+    else:
+        data = []
+
+    return data
 
 def get_data_targets(path, file, target_idx=None):
     if file.endswith(".arff"):

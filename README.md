@@ -1,5 +1,4 @@
-
-# deepunsupervised
+# Deep Unsupervised Learning
 
 Deep Unsupevised Learning
 

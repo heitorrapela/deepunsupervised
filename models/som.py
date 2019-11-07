@@ -176,24 +176,6 @@ class SOM(nn.Module):
 
         return loss
 
-    def write_output(self, output_path, result):
-        output_file = open(output_path, 'w+')
-
-        n_clusters = self.node_control[self.node_control == 1].size(0)
-
-        content = str(n_clusters) + "\t" + str(self.input_size) + "\n"
-        for i, relevance in enumerate(self.relevance):
-            if self.node_control[i] == 1:
-                content += str(i) + "\t" + "\t".join(map(str, relevance.numpy())) + "\n"
-
-        result_text = result.to_string(header=False, index=False).strip()
-        result_text = re.sub('\n +', '\n', result_text)
-        result_text = re.sub(' +', '\t', result_text)
-
-        content += result_text
-        output_file.write(content)
-        output_file.close()
-
     def cluster(self, dataloader):
         clustering = pd.DataFrame(columns=['sample_ind', 'cluster'])
         predict_labels = []
