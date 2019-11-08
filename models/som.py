@@ -162,7 +162,7 @@ class SOM(nn.Module):
             print("Samples Low at: ", samples_low_at)
             print("-----------------------------")
 
-        return updatable_samples_hight_at, self.weights[indexes_max]
+        return updatable_samples_hight_at, self.weights[unique_nodes_high_at]
 
     def unique_node_diff_vectorized(self, nodes, samples):
         unique_nodes, unique_nodes_counts = torch.unique(nodes, return_counts=True)

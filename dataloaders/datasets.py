@@ -21,9 +21,6 @@ class Datasets(data.Dataset):
 
         transform = transforms.Compose([transforms.ToTensor()])
 
-
-
-
         if dataset == "mnist":
 
             transform=transforms.Compose([

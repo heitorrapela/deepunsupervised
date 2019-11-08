@@ -210,4 +210,5 @@ if __name__ == '__main__':
     
     filename = dataset_path.split(".arff")[0] + ".results"
     utils.write_som_output(model.som, join(args.out_folder, filename), cluster_result)
-    print('{0} \tCE: {1:.3f}'.format(dataset_path,metrics.cluster.predict_to_clustering_error(true_labels,predict_labels)))
+    print('{0} \tCE: {1:.3f}'.format(dataset_path,
+                                     metrics.cluster.predict_to_clustering_error(true_labels, predict_labels)))
