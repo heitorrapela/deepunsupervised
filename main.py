@@ -98,12 +98,28 @@ def train_full_model(root, dataset_path, device, use_cuda, out_folder, epochs):
         model.cuda()
         cudnn.benchmark = True
 
-    lr = 0.000001
+    torch.manual_seed(1)
+    lr = 0.001
     optimizer = optim.SGD(model.parameters(), lr=lr, momentum=0.5)
     loss = nn.MSELoss(reduction='sum')
 
     model.train()
     for epoch in range(epochs):
+
+        # Self-Organize
+        for batch_idx, (sample, target) in enumerate(train_loader):
+            model(sample)
+
+        cluster_result, predict_labels, true_labels = model.cluster(test_loader, model)
+        print("Homogeneity: %0.3f" % metrics.cluster.homogeneity_score(true_labels, predict_labels))
+        print("Completeness: %0.3f" % metrics.cluster.completeness_score(true_labels, predict_labels))
+        print("V-measure: %0.3f" % metrics.cluster.v_measure_score(true_labels, predict_labels))
+        print('{0} \tCE: {1:.3f}'.format(dataset_path,
+                                         metrics.cluster.predict_to_clustering_error(true_labels, predict_labels)))
+
+        # Self-Organize and Backpropagate
+        avg_loss = 0
+        s = 0
         for batch_idx, (sample, target) in enumerate(train_loader):
             #  print("id sample: ", batch_idx, " , target:" ,target)
 
@@ -122,23 +138,22 @@ def train_full_model(root, dataset_path, device, use_cuda, out_folder, epochs):
             else:
                 out = 0.0
 
-            # sample = torch.tensor([[1., 1., 1.], [2., 2., 2.], [3., 3., 3.], [4., 4., 4.], [5., 5., 5.]])
-            # target = torch.tensor([1, 2, 3, 4, 5])
-            # print(output.shape)
-            # loss = F.nll_loss(output, target)
-            # loss.backward()#som.self_organize(output)  # Faz forward e ajuste
-            # optimizer.step()
-            if batch_idx % args.log_interval == 0:
-                print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss SOM: {:.6f}'.format(epoch,
-                                                                                   batch_idx * len(sample),
-                                                                                   len(train_loader.dataset),
-                                                                                   100. * batch_idx / len(train_loader),
-                                                                                   out))
+            # if batch_idx % args.log_interval == 0:
+            #     print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss SOM: {:.6f}'.format(epoch,
+            #                                                                        batch_idx * len(sample),
+            #                                                                        len(train_loader.dataset),
+            #                                                                        100. * batch_idx / len(train_loader),
+            #                                                                        out))
+
+            avg_loss += out
+            s += len(sample)
+
+        print("Epoch: %d avg_loss: %.6f\n" % (epoch, avg_loss/s))
 
     ## Need to change train loader to test loader...
     model.eval()
 
-    print("Train Finish", flush=True)
+    print("Train Finished", flush=True)
 
     cluster_result, predict_labels, true_labels = model.cluster(test_loader, model)
 
