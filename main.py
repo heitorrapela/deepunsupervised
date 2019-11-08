@@ -12,9 +12,9 @@ from os.path import join
 
 import os
 import argparse
-import numpy as np
 import metrics
-import utils
+from utils import utils
+
 
 def train_som(root, dataset_path, parameters, device, use_cuda, workers, out_folder,
               n_max=None, epochs=None, evaluate=False):
@@ -37,15 +37,15 @@ def train_som(root, dataset_path, parameters, device, use_cuda, workers, out_fol
 
         epochs_som = int(parameters[params + 5]) if epochs is None else epochs
 
-        manualSeed = int(parameters[params + 6])
-        random.seed(manualSeed)
-        torch.manual_seed(manualSeed)
+        manual_seed = int(parameters[params + 6])
+        random.seed(manual_seed)
+        torch.manual_seed(manual_seed)
 
         train_loader = DataLoader(dataset.train_data, batch_size=batch_size, shuffle=True, num_workers=workers)
         test_loader = DataLoader(dataset.test_data, shuffle=False)
 
         if use_cuda:
-            torch.cuda.manual_seed_all(manualSeed)
+            torch.cuda.manual_seed_all(manual_seed)
             som.cuda()
             cudnn.benchmark = True
 
@@ -71,15 +71,15 @@ def train_som(root, dataset_path, parameters, device, use_cuda, workers, out_fol
 
         cluster_result, predict_labels, true_labels = som.cluster(test_loader)
         filename = dataset_path.split(".arff")[0] + "_" + str(int(params / parameters_count)) + ".results"
-        utils.log.write_output(som, join(args.out_folder, filename), cluster_result)
+        utils.write_som_output(som, join(out_folder, filename), cluster_result)
 
         if evaluate:
             print('{0} id {1}\tCE: {4:.6f}'.format(dataset_path,
                                                    int(params / parameters_count),
                                                    epoch,
                                                    100. * batch_idx / len(train_loader),
-                                                   metrics.cluster.calculate_ce(true_labels,
-                                                                predict_labels)))
+                                                   metrics.cluster.predict_to_clustering_error(true_labels,
+                                                                                               predict_labels)))
 
 
 def argument_parser():
@@ -129,8 +129,8 @@ if __name__ == '__main__':
     batch_size = args.batch_size
     epochs = args.epochs
 
-    input_paths = utils.utils.read_lines(args.input_paths) if args.input_paths is not None else None
-    parameters = utils.utils.read_lines(args.params_file)
+    input_paths = utils.read_lines(args.input_paths) if args.input_paths is not None else None
+    parameters = utils.read_lines(args.params_file)
     n_max = args.nmax
 
     if input_paths is None:
