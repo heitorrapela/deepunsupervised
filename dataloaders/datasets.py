@@ -13,46 +13,51 @@ from os.path import join
 
 class Datasets(data.Dataset):
 
-    def __init__(self, dataset, root_folder="raw-datasets/"):
+    def __init__(self, dataset, root_folder="raw-datasets/", flatten=False):
         super(Datasets, self).__init__()
 
-        transform = transforms.Compose([transforms.ToTensor(),
-                                        ReshapeTransform((-1,))])
+        transform_list = [transforms.ToTensor()]
 
-        transform = transforms.Compose([transforms.ToTensor()])
+        if flatten:
+            transform_list.append(ReshapeTransform((-1,)))
 
         if dataset == "mnist":
-
-            transform=transforms.Compose([
-                transforms.ToTensor(),
-                transforms.Normalize((0.1307,), (0.3081,))
-            ])
+            transform_list.append(transforms.Normalize((0.1307,), (0.3081,)))
+            transform = transforms.Compose(transform_list)
 
             self.train_data = datasets.MNIST(root=root_folder, train=True, download=True, transform=transform)
             self.test_data = datasets.MNIST(root=root_folder, train=False, download=True, transform=transform)
 
             self.train_data.data = self.train_data.data[:100]
             self.test_data.data = self.test_data.data[:100]
-            #self.dim_flatten = self.train_data.data.size(1) * self.train_data.data.size(2)
+            self.dim_flatten = self.train_data.data.size(1) * self.train_data.data.size(2)
 
         elif dataset == "fashion":
+            transform = transforms.Compose(transform_list)
+
             self.train_data = datasets.FashionMNIST(root=root_folder, train=True, download=True, transform=transform)
             self.test_data = datasets.FashionMNIST(root=root_folder, train=False, download=True, transform=transform)
             self.dim_flatten = self.train_data.data.size(1) * self.train_data.data.size(2)
 
         elif dataset == "cifar10":
+            transform = transforms.Compose(transform_list)
+
             self.train_data = datasets.CIFAR10(root=root_folder, train=True, download=True, transform=transform)
             self.test_data = datasets.CIFAR10(root=root_folder, train=False, download=True, transform=transform)
             data_shape = self.train_data.data.shape
             self.dim_flatten = data_shape[1] * data_shape[2] * data_shape[3]
 
         elif dataset == "cifar100":
+            transform = transforms.Compose(transform_list)
+
             self.train_data = datasets.CIFAR100(root=root_folder, train=True, download=True, transform=transform)
             self.test_data = datasets.CIFAR100(root=root_folder, train=False, download=True, transform=transform)
             data_shape = self.train_data.data.shape
             self.dim_flatten = data_shape[1] * data_shape[2] * data_shape[3]
 
         elif dataset == "svhn":
+            transform = transforms.Compose(transform_list)
+
             self.train_data = datasets.SVHN(root=root_folder, split='train', download=True, transform=transform)
             self.test_data = datasets.SVHN(root=root_folder, split='test', download=True, transform=transform)
             data_shape = self.train_data.data.shape

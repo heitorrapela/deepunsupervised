@@ -17,9 +17,9 @@ from utils import utils
 
 
 def train_som(root, dataset_path, parameters, device, use_cuda, workers, out_folder,
-              n_max=None, epochs=None, evaluate=False):
+              n_max=None, evaluate=False):
 
-    dataset = Datasets(dataset=dataset_path, root_folder=root)
+    dataset = Datasets(dataset=dataset_path, root_folder=root, flatten=True)
 
     parameters_count = 7
 
@@ -35,7 +35,7 @@ def train_som(root, dataset_path, parameters, device, use_cuda, workers, out_fol
                   eps_ds=float(parameters[params + 4]),
                   device=device)
 
-        epochs_som = int(parameters[params + 5]) if epochs is None else epochs
+        epochs = int(parameters[params + 5])
 
         manual_seed = int(parameters[params + 6])
         random.seed(manual_seed)
@@ -49,7 +49,7 @@ def train_som(root, dataset_path, parameters, device, use_cuda, workers, out_fol
             som.cuda()
             cudnn.benchmark = True
 
-        for epoch in range(epochs_som):
+        for epoch in range(epochs):
             for batch_idx, (sample, target) in enumerate(train_loader):
                 sample, target = sample.to(device), target.to(device)
 
@@ -82,6 +82,80 @@ def train_som(root, dataset_path, parameters, device, use_cuda, workers, out_fol
                                                                                                predict_labels)))
 
 
+def train_full_model(root, dataset_path, device, use_cuda, out_folder, epochs):
+    dataset = Datasets(dataset=dataset_path, root_folder=root)
+    train_loader = DataLoader(dataset.train_data, batch_size=batch_size, shuffle=True)
+    test_loader = DataLoader(dataset.test_data, shuffle=False)
+
+    model = Net()
+
+    manual_seed = 1
+    random.seed(manual_seed)
+    torch.manual_seed(manual_seed)
+
+    if use_cuda:
+        torch.cuda.manual_seed_all(manual_seed)
+        model.cuda()
+        cudnn.benchmark = True
+
+    lr = 0.000001
+    optimizer = optim.SGD(model.parameters(), lr=lr, momentum=0.5)
+    loss = nn.MSELoss(reduction='sum')
+
+    model.train()
+    for epoch in range(epochs):
+        for batch_idx, (sample, target) in enumerate(train_loader):
+            #  print("id sample: ", batch_idx, " , target:" ,target)
+
+            #  print("***********************************************************************")
+            sample, target = sample.to(device), target.to(device)
+            optimizer.zero_grad()
+
+            samples_high_at, weights_unique_nodes_high_at, _ = model(sample)
+
+            if len(samples_high_at) > 0:  # if only new nodes were created, the loss is zero, no need to backprobagate it
+                weights_unique_nodes_high_at = weights_unique_nodes_high_at.view(-1, 2)
+
+                out = loss(weights_unique_nodes_high_at, samples_high_at)
+                out.backward()
+                optimizer.step()
+            else:
+                out = 0.0
+
+            # sample = torch.tensor([[1., 1., 1.], [2., 2., 2.], [3., 3., 3.], [4., 4., 4.], [5., 5., 5.]])
+            # target = torch.tensor([1, 2, 3, 4, 5])
+            # print(output.shape)
+            # loss = F.nll_loss(output, target)
+            # loss.backward()#som.self_organize(output)  # Faz forward e ajuste
+            # optimizer.step()
+            if batch_idx % args.log_interval == 0:
+                print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss SOM: {:.6f}'.format(epoch,
+                                                                                   batch_idx * len(sample),
+                                                                                   len(train_loader.dataset),
+                                                                                   100. * batch_idx / len(train_loader),
+                                                                                   out))
+
+    ## Need to change train loader to test loader...
+    model.eval()
+
+    print("Train Finish", flush=True)
+
+    cluster_result, predict_labels, true_labels = model.cluster(test_loader, model)
+
+    if not os.path.exists(join(args.out_folder, args.dataset.split(".arff")[0])):
+        os.makedirs(join(args.out_folder, args.dataset.split(".arff")[0]))
+
+    print("Homogeneity: %0.3f" % metrics.cluster.homogeneity_score(true_labels, predict_labels))
+    print("Completeness: %0.3f" % metrics.cluster.completeness_score(true_labels, predict_labels))
+    print("V-measure: %0.3f" % metrics.cluster.v_measure_score(true_labels, predict_labels))
+
+    filename = dataset_path.split(".arff")[0] + ".results"
+    utils.write_som_output(model.som, join(out_folder, filename), cluster_result)
+
+    print('{0} \tCE: {1:.3f}'.format(dataset_path,
+                                     metrics.cluster.predict_to_clustering_error(true_labels, predict_labels)))
+
+
 def argument_parser():
     parser = argparse.ArgumentParser(description='Self Organizing Map')
     parser.add_argument('--cuda', action='store_true', help='enables cuda')
@@ -95,8 +169,8 @@ def argument_parser():
     parser.add_argument('--dataset', type=str, default='mnist', help='Dataset Name')
     parser.add_argument('--out-folder', type=str, default='results/', help='Folder to output results')
     parser.add_argument('--batch-size', type=int, default=1, help='input batch size')
-    parser.add_argument('--epochs', type=int, default=2, help='input total epoch')
 
+    parser.add_argument('--epochs', type=int, default=50, help='input total epoch')
     parser.add_argument('--input-paths', default=None, help='Input Paths')
     parser.add_argument('--nmax', type=int, default=None, help='number of nodes')
     parser.add_argument('--params-file', default=None, help='Parameters')
@@ -133,82 +207,12 @@ if __name__ == '__main__':
     parameters = utils.read_lines(args.params_file) if args.params_file is not None else None
     n_max = args.nmax
 
-    '''
-    if input_paths is None:
-        train_som(root=root, dataset_path=dataset_path, parameters=parameters, device=device, use_cuda=use_cuda,
-                  workers=args.workers, out_folder=out_folder, n_max=n_max, epochs=epochs, evaluate=args.eval)
-    else:
-        for i, train_path in enumerate(input_paths):
-            train_som(root=root, dataset_path=train_path, parameters=parameters, device=device, use_cuda=use_cuda,
-                      workers=args.workers, out_folder=out_folder, n_max=n_max, epochs=epochs, evaluate=args.eval)
-    '''
+    train_full_model(root, dataset_path, device, use_cuda, out_folder, epochs)
 
-    dataset = Datasets(dataset=dataset_path, root_folder=root)
-    train_loader = DataLoader(dataset.train_data, batch_size=batch_size, shuffle=True)
-    test_loader = DataLoader(dataset.test_data, shuffle=False)
-
-    model = Net().to(device)
-
-    torch.manual_seed(1)
-    lr = 0.000001
-    optimizer = optim.SGD(model.parameters(), lr=lr, momentum=0.5)
-    loss = nn.MSELoss(reduction='sum')
-
-    model.train()
-    for epoch in range(epochs):
-        for batch_idx, (sample, target) in enumerate(train_loader):
-
-            #  print("id sample: ", batch_idx, " , target:" ,target)
-
-            #  print("***********************************************************************")
-            sample, target = sample.to(device), target.to(device)
-            optimizer.zero_grad()
-
-            samples_high_at, weights_unique_nodes_high_at, _ = model(sample)
-            
-            if samples_high_at is not None:  #  if only new nodes were created, the loss is zero, no need to backprobagate it
-                weights_unique_nodes_high_at = weights_unique_nodes_high_at.view(-1, 2)
-
-                out = loss(weights_unique_nodes_high_at, samples_high_at)
-                out.backward()
-                optimizer.step()
-            else:
-                out = 0.0
-
-            # sample = torch.tensor([[1., 1., 1.], [2., 2., 2.], [3., 3., 3.], [4., 4., 4.], [5., 5., 5.]])
-            # target = torch.tensor([1, 2, 3, 4, 5])
-            #print(output.shape)
-            #loss = F.nll_loss(output, target)
-            #loss.backward()#som.self_organize(output)  # Faz forward e ajuste
-            #optimizer.step()
-            if batch_idx % args.log_interval == 0:
-                print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss SOM: {:.6f}'.format(epoch,
-                                                                                   batch_idx * len(sample),
-                                                                                   len(train_loader.dataset),
-                                                                                   100. * batch_idx / len(train_loader),
-                                                                                   out))
-
-    ## Need to change train loader to test loader...
-    model.eval()
-
-    print("Train Finish", flush=True)
-
-    cluster_result, predict_labels, true_labels = model.cluster(test_loader, model)
-
-    if not os.path.exists(join(args.out_folder, args.dataset.split(".arff")[0])):
-        os.makedirs(join(args.out_folder, args.dataset.split(".arff")[0]))
-
-    # args.dataset.split(".arff")[0].split("/")[-1] + ".results", cluster_result)
-	# print(np.asarray(predict_labels).shape,np.asarray(true_labels).shape)
-	# print(adjusted_rand_score(true_labels,predict_labels))
-	# print(completeness_score(true_labels,predict_labels))
-
-    # cluster.teste(true_labels,predict_labels)
-    print("Homogeneity: %0.3f" % metrics.cluster.homogeneity_score(true_labels, predict_labels))
-    print("Completeness: %0.3f" % metrics.cluster.completeness_score(true_labels, predict_labels))
-    print("V-measure: %0.3f" % metrics.cluster.v_measure_score(true_labels, predict_labels))
-    
-    filename = dataset_path.split(".arff")[0] + ".results"
-    utils.write_som_output(model.som, join(args.out_folder, filename), cluster_result)
-    print('{0} \tCE: {1:.3f}'.format(dataset_path,
-                                     metrics.cluster.predict_to_clustering_error(true_labels, predict_labels)))
+    # if input_paths is None:
+    #     train_som(root=root, dataset_path=dataset_path, parameters=parameters, device=device, use_cuda=use_cuda,
+    #               workers=args.workers, out_folder=out_folder, n_max=n_max, epochs=epochs, evaluate=args.eval)
+    # else:
+    #     for i, train_path in enumerate(input_paths):
+    #         train_som(root=root, dataset_path=train_path, parameters=parameters, device=device, use_cuda=use_cuda,
+    #                   workers=args.workers, out_folder=out_folder, n_max=n_max, epochs=epochs, evaluate=args.eval)
