@@ -131,7 +131,8 @@ class SOM(nn.Module):
         samples_high_at = input[bool_high_at]
         nodes_high_at = indexes_max[bool_high_at]
 
-        updatable_samples_hight_at = None
+        updatable_samples_hight_at = []
+        unique_nodes_high_at = []
         if len(nodes_high_at) > 0:
             self.node_control[nodes_high_at] = 1.
             unique_nodes_high_at, updatable_samples_hight_at = self.unique_node_diff_vectorized(nodes_high_at,
