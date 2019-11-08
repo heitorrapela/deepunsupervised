@@ -207,16 +207,20 @@ if __name__ == '__main__':
             #print(samples_high_at)
             #if(n == 5):
             #    exit(0)
-
             
-            weights_unique_nodes_high_at = weights_unique_nodes_high_at.view(-1,2)
-            out = loss(weights_unique_nodes_high_at, samples_high_at)#torch.transpose(som.weight,0,1),output.unsqueeze(1))
-            #print("------")
-            #print(weights_unique_nodes_high_at.shape, samples_high_at.shape)
-            #print(out)
-            #print("------")
-            out.backward()
-            optimizer.step()
+            if samples_high_at is not None:  # if only new nodes were created, the loss is zero, no need to backprobagate it
+
+                weights_unique_nodes_high_at = weights_unique_nodes_high_at.view(-1, 2)
+
+                out = loss(weights_unique_nodes_high_at, samples_high_at)#torch.transpose(som.weight,0,1),output.unsqueeze(1))
+                #print("------")
+                #print(weights_unique_nodes_high_at.shape, samples_high_at.shape)
+                #print(out)
+                #print("------")
+                out.backward()
+                optimizer.step()
+            else:
+                out = 0.0
 
 
             #if(n == 5):
@@ -249,6 +253,8 @@ if __name__ == '__main__':
                 print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss SOM: {:.6f}'.format(
                     epoch, batch_idx * len(sample), len(train_loader.dataset),
                            100. * batch_idx / len(train_loader), out))
+                if out>0.8:
+                    print('Sample:', samples_high_at, " Prototype:", weights_unique_nodes_high_at)
 
     ## Need to change train loader to test loader...
     model.eval()

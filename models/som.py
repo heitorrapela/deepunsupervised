@@ -154,7 +154,7 @@ class SOM(nn.Module):
         nodes_high_at = indexes_max[bool_high_at]
         
         unique_nodes_high_at = 0
-        updatable_samples_hight_at = nn.Parameter(torch.zeros(1, 2, device=self.device), requires_grad=False)#0
+        updatable_samples_hight_at = None
 
         if len(nodes_high_at) > 0:
             self.node_control[nodes_high_at] = 1.
@@ -208,7 +208,10 @@ class SOM(nn.Module):
         print("...")
         '''
 
-        return updatable_samples_hight_at, self.weights[unique_nodes_high_at], losses.sum().div_(batch_size)
+        if updatable_samples_hight_at is None:
+            return None, self.weights[unique_nodes_high_at], losses.sum().div_(batch_size)
+        else:
+            return updatable_samples_hight_at, self.weights[unique_nodes_high_at], losses.sum().div_(batch_size)
 
     def unique_node_diff_vectorized(self, nodes, samples):
         unique_nodes, unique_nodes_counts = torch.unique(nodes, return_counts=True)
