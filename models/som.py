@@ -3,9 +3,6 @@
 import torch
 import torch.nn as nn
 import pandas as pd
-import re
-import models.cnn_mnist #import Net
-
 
 
 class SOM(nn.Module):
@@ -58,13 +55,6 @@ class SOM(nn.Module):
 
         x2_t = torch.transpose(x2, 0, 1)
         x2_norm = (x2 ** 2).sum(1).view(1, -1)
-
-
-        #print(x1_norm.shape)
-        #print(x2_norm.shape)
-        #print(x1.shape)
-        #print(x2_t.shape)
-
 
         dist = x1_norm + x2_norm - 2.0 * torch.mm(x1, x2_t)
 
@@ -123,13 +113,9 @@ class SOM(nn.Module):
             delta = torch.mul(self.lr, torch.sub(w, self.weights[index]))
             self.weights[index] = torch.add(self.weights[index], delta)
 
-        return delta
-
-    def get_highest_at(self, input):
+    def get_winners(self, input):
         activations = self.activation(input) * self.node_control
-        act_max, index_max = torch.max(activations, dim=1)
-
-        return index_max
+        return torch.max(activations, dim=1)
 
     def forward(self, input, lr=0.01):
         '''
@@ -138,39 +124,28 @@ class SOM(nn.Module):
         :param lr: learning rate
         :return: loss, location of best matching unit
         '''
-
-        batch_size = input.size(0)
-        losses = torch.tensor(0)
-
-        activations = self.activation(input) * self.node_control
-        act_max, indexes_max = torch.max(activations, dim=1)
+        act_max, indexes_max = self.get_winners(input)
 
         bool_high_at = act_max >= self.at
 
-
-        #print("Input shape: ", input.shape)
-
         samples_high_at = input[bool_high_at]
         nodes_high_at = indexes_max[bool_high_at]
-        
-        unique_nodes_high_at = 0
-        updatable_samples_hight_at = None
 
+        updatable_samples_hight_at = None
         if len(nodes_high_at) > 0:
             self.node_control[nodes_high_at] = 1.
             unique_nodes_high_at, updatable_samples_hight_at = self.unique_node_diff_vectorized(nodes_high_at,
                                                                                                 samples_high_at)
-            losses = self.update_node(updatable_samples_hight_at, unique_nodes_high_at)
+            self.update_node(updatable_samples_hight_at, unique_nodes_high_at)
             
-            #print("------------- Update Node ----------------")
-            #print("Node:", self.weights[unique_nodes_high_at])
-            #print("Node idx:", unique_nodes_high_at)
-            #print("Samples High at: ", updatable_samples_hight_at)
-            #print("-----------------------------")
+            #  print("------------- Update Node ----------------")
+            #  print("Node:", self.weights[unique_nodes_high_at])
+            #  print("Node idx:", unique_nodes_high_at)
+            #  print("Samples High at: ", updatable_samples_hight_at)
+            #  print("-----------------------------")
 
-
-            #print(unique_nodes_high_at)
-            #exit(0)
+            #  print(unique_nodes_high_at)
+            #  exit(0)
 
         bool_low_at = act_max < self.at
         samples_low_at = input[bool_low_at]
@@ -187,31 +162,7 @@ class SOM(nn.Module):
             print("Samples Low at: ", samples_low_at)
             print("-----------------------------")
 
-
-
-        '''
-        #print(samples_high_at)
-        relevance_sum = torch.sum(self.relevance, 1)
-
-        print("Relevance", len(self.relevance), " ", len(bool_high_at))
-
-        print(len(input), input.shape)
-        #print(input)
-        print(len(bool_low_at), bool_low_at.shape)
-        print("---")
-        print(len(input[bool_low_at]), input[bool_low_at].shape)
-        print("---")
-
-        print(len(relevance_sum), relevance_sum.shape)
-        print(len(bool_high_at), bool_high_at.shape,bool_high_at)
-        print(relevance_sum[bool_high_at])
-        print("...")
-        '''
-
-        if updatable_samples_hight_at is None:
-            return None, self.weights[unique_nodes_high_at], losses.sum().div_(batch_size)
-        else:
-            return updatable_samples_hight_at, self.weights[unique_nodes_high_at], losses.sum().div_(batch_size)
+        return updatable_samples_hight_at, self.weights[indexes_max]
 
     def unique_node_diff_vectorized(self, nodes, samples):
         unique_nodes, unique_nodes_counts = torch.unique(nodes, return_counts=True)
@@ -223,33 +174,18 @@ class SOM(nn.Module):
 
         return unique_nodes.t(), updatable_samples.t()
 
-    def self_organize(self, input):
-        '''
-        Train the Self Oranizing Map(SOM)
-        :param input: training data
-        :param current_iter: current epoch of total epoch
-        :param max_iter: total epoch
-        :return: loss, location of best matching unit
-        '''
-        # Find best matching unit
-        loss = self.forward(input, self.lr)
-
-        return loss
-
-    def cluster(self, dataloader, model):
+    def cluster(self, dataloader, model=None):
         clustering = pd.DataFrame(columns=['sample_ind', 'cluster'])
         predict_labels = []
         true_labels = []
 
-        use_cuda=False
-        device = torch.device('cuda:0' if use_cuda else 'cpu')
-        #model.test()
-        #som = SOM(input_dim=800, device=device)
-        #som = som.to(device)
         for batch_idx, (inputs, targets) in enumerate(dataloader):
-            samples_high_at, weights_unique_nodes_high_at, loss_som, outputs = model(inputs)
+            feed_som = inputs
+            if model is not None:
+                samples_high_at, weights_unique_nodes_high_at, outputs = model(inputs)
+                feed_som = outputs
             
-            bmu_indexes = self.get_highest_at(outputs.to(self.device))
+            _, bmu_indexes = self.get_winners(feed_som.to(self.device))
             ind_max = bmu_indexes.item()
 
             clustering = clustering.append({'sample_ind': batch_idx,
@@ -263,6 +199,5 @@ class SOM(nn.Module):
             print("Prototipo: ", weights_unique_nodes_high_at)
             print("Index: ", ind_max)
             print("----------------------------------------------")
-
 
         return clustering, predict_labels, true_labels

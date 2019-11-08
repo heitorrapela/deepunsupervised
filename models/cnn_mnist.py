@@ -7,6 +7,7 @@ import torch.optim as optim
 from torchvision import datasets, transforms
 from models.som import SOM
 
+
 class Net(nn.Module):
     def __init__(self):
         super(Net, self).__init__()
@@ -27,21 +28,21 @@ class Net(nn.Module):
         x = F.max_pool2d(x, 2, 2)
         x = x.view(-1, 4*4*50)
         x = self.fc1(x)
-        #x = x.view(-1, 2)
+        #  x = x.view(-1, 2)
         x = F.log_softmax(x, dim=1)
-        #print(x,x.size())
-        #weights, relevance, losses = self.som(x)
-        #print(x,x.size())
-        #x = F.relu(self.fc1(x))
-        #x = self.fc2(x)
+        #  print(x,x.size())
+        #  weights, relevance, losses = self.som(x)
+        #  print(x,x.size())
+        #  x = F.relu(self.fc1(x))
+        #  x = self.fc2(x)
 
-        #print(x.shape)
+        #  print(x.shape)
 
-        samples_high_at, weights_unique_nodes_high_at, loss_som = self.som(x)
+        samples_high_at, weights_unique_nodes_high_at = self.som(x)
 
-        #print(weights_unique_nodes_high_at.shape, samples_high_at.shape)
+        #  print(weights_unique_nodes_high_at.shape, samples_high_at.shape)
 
-        return samples_high_at, weights_unique_nodes_high_at, loss_som, x#F.log_softmax(x, dim=1)
+        return samples_high_at, weights_unique_nodes_high_at, x  # F.log_softmax(x, dim=1)
 
     '''
     def forward_cluster(self, x):

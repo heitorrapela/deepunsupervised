@@ -1,6 +1,5 @@
 # Author: Pedro Braga <phmb4@cin.ufpe.br>.
 import os
-import torch
 
 from models.som import SOM
 from dataloaders.datasets import Datasets
@@ -9,10 +8,8 @@ import random
 from torch.utils.data.dataloader import DataLoader
 from os.path import join
 import argparse
-import numpy as np
 import metrics
 from models.cnn_mnist import Net
-import torch.nn.functional as F
 import torch.optim as optim
 import torch
 import torch.nn as nn
@@ -56,7 +53,7 @@ def train_som(root, dataset_path, parameters, device, use_cuda, workers, out_fol
             for batch_idx, (sample, target) in enumerate(train_loader):
                 sample, target = sample.to(device), target.to(device)
 
-                som_loss = som.self_organize(sample)
+                som_loss = som(sample)
                 if batch_idx % args.log_interval == 0:
                     print('{0} id {1} [epoch: {2}] Loss: {3:.6f}'.format(dataset_path,
                                                                          int(params / parameters_count),
@@ -150,95 +147,34 @@ if __name__ == '__main__':
     train_loader = DataLoader(dataset.train_data, batch_size=batch_size, shuffle=True)
     test_loader = DataLoader(dataset.test_data, shuffle=False)
 
-
     model = Net().to(device)
 
     torch.manual_seed(1)
     lr = 0.000001
     optimizer = optim.SGD(model.parameters(), lr=lr, momentum=0.5)
     loss = nn.MSELoss(reduction='sum')
-    
-    n = 0
+
     model.train()
     for epoch in range(epochs):
         for batch_idx, (sample, target) in enumerate(train_loader):
 
-            #print("id sample: ", batch_idx, " , target:" ,target)
+            #  print("id sample: ", batch_idx, " , target:" ,target)
 
-            #print("***********************************************************************")
+            #  print("***********************************************************************")
             sample, target = sample.to(device), target.to(device)
             optimizer.zero_grad()
 
-            #output_cnn = model(sample)
-            #samples_high_at, weights_unique_nodes_high_at, loss_som = som(output_cnn)
-            #print(sample.shape)
-
-            samples_high_at, weights_unique_nodes_high_at, loss_som, _ = model(sample)
-
-            #return samples_high_at, nodes_high_at, losses.sum().div_(batch_size)
-            #return updatable_samples_hight_at,unique_nodes_high_at, self.relevance, losses.sum().div_(batch_size)
-            #output = torch.tensor(np.array(output))
-            #print(output.shape)
-            #print(output)
-            #print(target.shape)
-            #print(target)
-            #print(sample.shape)
-            #print(output_cnn.shape)
-            #print(output_som.shape)
-            #return samples_high_at, nodes_high_at, self.relevance[bool_high_at], losses.sum().div_(batch_size)
-            #return updatable_samples_hight_at, self.weights[unique_nodes_high_at], losses.sum().div_(batch_size)
-            #print(len(samples_high_at),len(nodes_high_at),len(relevance_high_at), loss_som)
-
-            #print("------------")
-            #print(samples_high_at)
-            #print("------------")
-            #exit(0)
-            #print(weights_unique_nodes_high_at)
-            #print(weights_unique_nodes_high_at.shape)
-
-
-            #n = n + 1
-            #exit(0)
-            #print(loss_som)
-            #print(samples_high_at)
-            #if(n == 5):
-            #    exit(0)
+            samples_high_at, weights_unique_nodes_high_at, _ = model(sample)
             
-            if samples_high_at is not None:  # if only new nodes were created, the loss is zero, no need to backprobagate it
-
+            if samples_high_at is not None:  #  if only new nodes were created, the loss is zero, no need to backprobagate it
                 weights_unique_nodes_high_at = weights_unique_nodes_high_at.view(-1, 2)
 
-                out = loss(weights_unique_nodes_high_at, samples_high_at)#torch.transpose(som.weight,0,1),output.unsqueeze(1))
-                #print("------")
-                #print(weights_unique_nodes_high_at.shape, samples_high_at.shape)
-                #print(out)
-                #print("------")
+                out = loss(weights_unique_nodes_high_at, samples_high_at)
                 out.backward()
                 optimizer.step()
             else:
                 out = 0.0
 
-
-            #if(n == 5):
-            #    exit(0)
-            #n = n+1
-            #som.self_organizing(output.view(-1, 28 * 28 * 1), epoch, args.epochs+1)
-
-            #print(" AEW ")
-            #exit(0)
-
-
-
-            #loss = F.nll_loss(output, target)
-            
-            '''
-            loss.backward()
-            
-            if batch_idx % args.log_interval == 0:
-                print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
-                    epoch, batch_idx * len(data), len(train_loader.dataset),
-                    100. * batch_idx / len(train_loader), loss.item()))
-            '''
             # sample = torch.tensor([[1., 1., 1.], [2., 2., 2.], [3., 3., 3.], [4., 4., 4.], [5., 5., 5.]])
             # target = torch.tensor([1, 2, 3, 4, 5])
             #print(output.shape)
@@ -246,11 +182,11 @@ if __name__ == '__main__':
             #loss.backward()#som.self_organize(output)  # Faz forward e ajuste
             #optimizer.step()
             if batch_idx % args.log_interval == 0:
-                print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss SOM: {:.6f}'.format(
-                    epoch, batch_idx * len(sample), len(train_loader.dataset),
-                           100. * batch_idx / len(train_loader), out))
-                if out>0.8:
-                    print('Sample:', samples_high_at, " Prototype:", weights_unique_nodes_high_at)
+                print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss SOM: {:.6f}'.format(epoch,
+                                                                                   batch_idx * len(sample),
+                                                                                   len(train_loader.dataset),
+                                                                                   100. * batch_idx / len(train_loader),
+                                                                                   out))
 
     ## Need to change train loader to test loader...
     model.eval()
@@ -267,7 +203,7 @@ if __name__ == '__main__':
 	# print(adjusted_rand_score(true_labels,predict_labels))
 	# print(completeness_score(true_labels,predict_labels))
 
-    #cluster.teste(true_labels,predict_labels)
+    # cluster.teste(true_labels,predict_labels)
     print("Homogeneity: %0.3f" % metrics.cluster.homogeneity_score(true_labels, predict_labels))
     print("Completeness: %0.3f" % metrics.cluster.completeness_score(true_labels, predict_labels))
     print("V-measure: %0.3f" % metrics.cluster.v_measure_score(true_labels, predict_labels))
