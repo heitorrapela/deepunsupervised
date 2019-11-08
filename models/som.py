@@ -236,7 +236,7 @@ class SOM(nn.Module):
 
         return loss
 
-    def cluster(self, dataloader):
+    def cluster(self, dataloader, model):
         clustering = pd.DataFrame(columns=['sample_ind', 'cluster'])
         predict_labels = []
         true_labels = []

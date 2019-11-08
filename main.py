@@ -1,19 +1,13 @@
 # Author: Pedro Braga <phmb4@cin.ufpe.br>.
-
 import os
-os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
-
 import torch
 
 from models.som import SOM
 from dataloaders.datasets import Datasets
 import torch.backends.cudnn as cudnn
 import random
-
 from torch.utils.data.dataloader import DataLoader
 from os.path import join
-
-
 import argparse
 import numpy as np
 import metrics
@@ -104,11 +98,11 @@ def argument_parser():
     parser.add_argument('--dataset', type=str, default='mnist', help='Dataset Name')
     parser.add_argument('--out-folder', type=str, default='results/', help='Folder to output results')
     parser.add_argument('--batch-size', type=int, default=1, help='input batch size')
-    parser.add_argument('--epochs', type=int, default=None, help='input total epoch')
+    parser.add_argument('--epochs', type=int, default=2, help='input total epoch')
 
     parser.add_argument('--input-paths', default=None, help='Input Paths')
     parser.add_argument('--nmax', type=int, default=None, help='number of nodes')
-    parser.add_argument('--params-file', help='Parameters', required=True)
+    parser.add_argument('--params-file', default=None, help='Parameters')
 
     return parser.parse_args()
 
@@ -139,9 +133,10 @@ if __name__ == '__main__':
     epochs = args.epochs
 
     input_paths = utils.read_lines(args.input_paths) if args.input_paths is not None else None
-    parameters = utils.read_lines(args.params_file)
+    parameters = utils.read_lines(args.params_file) if args.params_file is not None else None
     n_max = args.nmax
 
+    '''
     if input_paths is None:
         train_som(root=root, dataset_path=dataset_path, parameters=parameters, device=device, use_cuda=use_cuda,
                   workers=args.workers, out_folder=out_folder, n_max=n_max, epochs=epochs, evaluate=args.eval)
@@ -149,6 +144,7 @@ if __name__ == '__main__':
         for i, train_path in enumerate(input_paths):
             train_som(root=root, dataset_path=train_path, parameters=parameters, device=device, use_cuda=use_cuda,
                       workers=args.workers, out_folder=out_folder, n_max=n_max, epochs=epochs, evaluate=args.eval)
+    '''
 
     dataset = Datasets(dataset=dataset_path, root_folder=root)
     train_loader = DataLoader(dataset.train_data, batch_size=batch_size, shuffle=True)
@@ -249,7 +245,7 @@ if __name__ == '__main__':
             #loss = F.nll_loss(output, target)
             #loss.backward()#som.self_organize(output)  # Faz forward e ajuste
             #optimizer.step()
-            if batch_idx % args.loginterval == 0:
+            if batch_idx % args.log_interval == 0:
                 print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss SOM: {:.6f}'.format(
                     epoch, batch_idx * len(sample), len(train_loader.dataset),
                            100. * batch_idx / len(train_loader), out))
@@ -261,14 +257,10 @@ if __name__ == '__main__':
 
     print("Train Finish", flush=True)
 
-    cluster_result, predict_labels, true_labels = model.cluster(test_loader,model)
+    cluster_result, predict_labels, true_labels = model.cluster(test_loader, model)
 
     if not os.path.exists(join(args.out_folder, args.dataset.split(".arff")[0])):
         os.makedirs(join(args.out_folder, args.dataset.split(".arff")[0]))
-
-    model.write_output(join(args.out_folder,
-                          join(args.dataset.split(".arff")[0], args.dataset.split(".arff")[0] + ".results")),
-                     cluster_result)
 
     # args.dataset.split(".arff")[0].split("/")[-1] + ".results", cluster_result)
 	# print(np.asarray(predict_labels).shape,np.asarray(true_labels).shape)
@@ -279,3 +271,7 @@ if __name__ == '__main__':
     print("Homogeneity: %0.3f" % metrics.cluster.homogeneity_score(true_labels, predict_labels))
     print("Completeness: %0.3f" % metrics.cluster.completeness_score(true_labels, predict_labels))
     print("V-measure: %0.3f" % metrics.cluster.v_measure_score(true_labels, predict_labels))
+    
+    filename = dataset_path.split(".arff")[0] + ".results"
+    utils.write_som_output(model.som, join(args.out_folder, filename), cluster_result)
+    print('{0} \tCE: {1:.3f}'.format(dataset_path,metrics.cluster.predict_to_clustering_error(true_labels,predict_labels)))

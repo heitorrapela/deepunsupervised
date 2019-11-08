@@ -53,8 +53,8 @@ class Net(nn.Module):
         #x = F.log_softmax(x, dim=1)
         return x
     '''
-    def cluster(self, dataloader, model):
-        return self.som.cluster(dataloader, model)
+    def cluster(self, dataloader,model):
+        return self.som.cluster(dataloader,model)
 
     def write_output(self,output_path,result):
         print(output_path)

@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 from scipy.io import arff
 from sklearn.metrics import confusion_matrix as sk_confusion
+import sklearn
 
 def homogeneity_score(true_labels, predict_labels):
     return sklearn.metrics.cluster.homogeneity_score(true_labels, predict_labels)
