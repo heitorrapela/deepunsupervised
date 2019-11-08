@@ -95,7 +95,7 @@ def argument_parser():
     parser.add_argument('--dataset', type=str, default='mnist', help='Dataset Name')
     parser.add_argument('--out-folder', type=str, default='results/', help='Folder to output results')
     parser.add_argument('--batch-size', type=int, default=1, help='input batch size')
-    parser.add_argument('--epochs', type=int, default=2, help='input total epoch')
+    parser.add_argument('--epochs', type=int, default=50, help='input total epoch')
 
     parser.add_argument('--input-paths', default=None, help='Input Paths')
     parser.add_argument('--nmax', type=int, default=None, help='number of nodes')
@@ -150,12 +150,27 @@ if __name__ == '__main__':
     model = Net().to(device)
 
     torch.manual_seed(1)
-    lr = 0.000001
+    lr = 0.001
     optimizer = optim.SGD(model.parameters(), lr=lr, momentum=0.5)
     loss = nn.MSELoss(reduction='sum')
 
     model.train()
     for epoch in range(epochs):
+
+        # Self-Organize
+        for batch_idx, (sample, target) in enumerate(train_loader):
+            model(sample)
+
+        cluster_result, predict_labels, true_labels = model.cluster(test_loader, model)
+        print("Homogeneity: %0.3f" % metrics.cluster.homogeneity_score(true_labels, predict_labels))
+        print("Completeness: %0.3f" % metrics.cluster.completeness_score(true_labels, predict_labels))
+        print("V-measure: %0.3f" % metrics.cluster.v_measure_score(true_labels, predict_labels))
+        print('{0} \tCE: {1:.3f}'.format(dataset_path,
+                                         metrics.cluster.predict_to_clustering_error(true_labels, predict_labels)))
+
+        # Self-Organize and Backpropagate
+        avg_loss = 0
+        s = 0
         for batch_idx, (sample, target) in enumerate(train_loader):
 
             #  print("id sample: ", batch_idx, " , target:" ,target)
@@ -166,7 +181,7 @@ if __name__ == '__main__':
 
             samples_high_at, weights_unique_nodes_high_at, _ = model(sample)
             
-            if samples_high_at is not None:  #  if only new nodes were created, the loss is zero, no need to backprobagate it
+            if len(samples_high_at) > 0:  #  if only new nodes were created, the loss is zero, no need to backprobagate it
                 weights_unique_nodes_high_at = weights_unique_nodes_high_at.view(-1, 2)
 
                 out = loss(weights_unique_nodes_high_at, samples_high_at)
@@ -181,17 +196,20 @@ if __name__ == '__main__':
             #loss = F.nll_loss(output, target)
             #loss.backward()#som.self_organize(output)  # Faz forward e ajuste
             #optimizer.step()
-            if batch_idx % args.log_interval == 0:
-                print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss SOM: {:.6f}'.format(epoch,
-                                                                                   batch_idx * len(sample),
-                                                                                   len(train_loader.dataset),
-                                                                                   100. * batch_idx / len(train_loader),
-                                                                                   out))
+            # if batch_idx % args.log_interval == 0:
+            #     print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss SOM: {:.6f}'.format(epoch,
+            #                                                                        batch_idx * len(sample),
+            #                                                                        len(train_loader.dataset),
+            #                                                                        100. * batch_idx / len(train_loader),
+            #                                                                        out))
+            avg_loss += out
+            s += len(sample)
 
+        print("Epoch: %d avg_loss: %.6f\n" % (epoch, avg_loss/s))
     ## Need to change train loader to test loader...
     model.eval()
 
-    print("Train Finish", flush=True)
+    print("Train Finished", flush=True)
 
     cluster_result, predict_labels, true_labels = model.cluster(test_loader, model)
 

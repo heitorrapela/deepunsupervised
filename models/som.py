@@ -7,7 +7,7 @@ import pandas as pd
 
 class SOM(nn.Module):
 
-    def __init__(self, input_dim, n_max=20, lr=0.3, at=0.99, dsbeta=0.0001, eps_ds=0.01, device='cpu'):
+    def __init__(self, input_dim, n_max=20, lr=0.1, at=0.99, dsbeta=0.0001, eps_ds=0.01, device='cpu'):
         '''
         :param input_dim:
         :param n_max:
@@ -158,10 +158,10 @@ class SOM(nn.Module):
             
             idx = self.add_node(updatable_samples_low_at)
             print("------------- Create Node ----------------")
-            print("Node:", self.weights[idx])
             print("Node idx:", idx)
-            print("Samples Low at: ", samples_low_at)
-            print("-----------------------------")
+            # print("Node:", self.weights[idx])
+            # print("Samples Low at: ", samples_low_at)
+            # print("-----------------------------")
 
         return updatable_samples_hight_at, self.weights[unique_nodes_high_at]
 
@@ -195,10 +195,10 @@ class SOM(nn.Module):
             predict_labels.append(ind_max)
             true_labels.append(targets.item())
 
-            print("----------------------------------------------")
-            print("Saida CNN: ", outputs)
-            print("Prototipo: ", weights_unique_nodes_high_at)
-            print("Index: ", ind_max)
-            print("----------------------------------------------")
+            # print("----------------------------------------------")
+            # print("Saida CNN: ", outputs)
+            # print("Prototipo: ", weights_unique_nodes_high_at)
+            # print("Index: ", ind_max)
+            # print("----------------------------------------------")
 
         return clustering, predict_labels, true_labels
