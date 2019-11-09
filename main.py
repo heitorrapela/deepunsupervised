@@ -13,6 +13,7 @@ from models.cnn_mnist import Net
 import torch.optim as optim
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from utils import utils
 
 
@@ -82,6 +83,9 @@ def train_som(root, dataset_path, parameters, device, use_cuda, workers, out_fol
                                                                                                predict_labels)))
 
 
+def WaitedMSELoss(output, target, relevance):
+    return torch.sum(relevance * (output - target) ** 2)
+
 def train_full_model(root, dataset_path, device, use_cuda, out_folder, epochs):
     dataset = Datasets(dataset=dataset_path, root_folder=root)
     train_loader = DataLoader(dataset.train_data, batch_size=batch_size, shuffle=True)
@@ -99,7 +103,7 @@ def train_full_model(root, dataset_path, device, use_cuda, out_folder, epochs):
         cudnn.benchmark = True
 
     torch.manual_seed(1)
-    lr = 0.0001
+    lr = 0.00001
     #optimizer = optim.SGD(model.parameters(), lr=lr, momentum=0.5)
     optimizer = optim.Adam(model.parameters(), lr=lr)
     loss = nn.MSELoss(reduction='sum')
@@ -128,12 +132,15 @@ def train_full_model(root, dataset_path, device, use_cuda, out_folder, epochs):
             sample, target = sample.to(device), target.to(device)
             optimizer.zero_grad()
 
-            samples_high_at, weights_unique_nodes_high_at, _ = model(sample)
+            samples_high_at, weights_unique_nodes_high_at, relevances, _ = model(sample)
 
             if len(samples_high_at) > 0:  #  if only new nodes were created, the loss is zero, no need to backprobagate it
                 weights_unique_nodes_high_at = weights_unique_nodes_high_at.view(-1, model.som_input_size)
 
-                out = loss(weights_unique_nodes_high_at, samples_high_at)
+                # out = loss(samples_high_at, weights_unique_nodes_high_at)
+                # print("msel out:", out)
+                out = WaitedMSELoss(samples_high_at, weights_unique_nodes_high_at, relevances)
+                # print("wmes out:", out)
                 out.backward()
                 optimizer.step()
             else:
@@ -184,7 +191,7 @@ def argument_parser():
     parser.add_argument('--out-folder', type=str, default='results/', help='Folder to output results')
     parser.add_argument('--batch-size', type=int, default=2, help='input batch size')
 
-    parser.add_argument('--epochs', type=int, default=50, help='input total epoch')
+    parser.add_argument('--epochs', type=int, default=60, help='input total epoch')
     parser.add_argument('--input-paths', default=None, help='Input Paths')
     parser.add_argument('--nmax', type=int, default=None, help='number of nodes')
     parser.add_argument('--params-file', default=None, help='Parameters')

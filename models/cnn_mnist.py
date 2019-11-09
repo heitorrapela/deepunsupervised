@@ -12,7 +12,7 @@ class Net(nn.Module):
     def __init__(self):
         super(Net, self).__init__()
 
-        self.som_input_size = 2
+        self.som_input_size = 10
         self.conv1 = nn.Conv2d(1, 20, 5, 1)
         self.conv2 = nn.Conv2d(20, 50, 5, 1)
         self.fc1 = nn.Linear(4 * 4 * 50, self.som_input_size)
@@ -41,11 +41,11 @@ class Net(nn.Module):
 
         #  print(x.shape)
 
-        samples_high_at, weights_unique_nodes_high_at = self.som(x)
+        samples_high_at, weights_unique_nodes_high_at, relevances = self.som(x)
 
         #  print(weights_unique_nodes_high_at.shape, samples_high_at.shape)
 
-        return samples_high_at, weights_unique_nodes_high_at, x  # F.log_softmax(x, dim=1)
+        return samples_high_at, weights_unique_nodes_high_at, relevances, x  # F.log_softmax(x, dim=1)
 
     '''
     def forward_cluster(self, x):

@@ -7,7 +7,7 @@ import pandas as pd
 
 class SOM(nn.Module):
 
-    def __init__(self, input_dim, n_max=50, lr=0.01, at=0.990, dsbeta=0.1, eps_ds=0.5, device='cpu'):
+    def __init__(self, input_dim, n_max=100, lr=0.02, at=0.98, dsbeta=0.1, eps_ds=0.5, device='cpu'):
         '''
         :param input_dim:
         :param n_max:
@@ -31,7 +31,7 @@ class SOM(nn.Module):
         self.node_control = nn.Parameter(torch.zeros(n_max, device=self.device), requires_grad=False)
         self.weights = nn.Parameter(torch.zeros(n_max, input_dim, device=self.device), requires_grad=True)
         self.moving_avg = nn.Parameter(torch.zeros(n_max, input_dim, device=self.device), requires_grad=False)
-        self.relevance = nn.Parameter(torch.ones(n_max, input_dim, device=self.device), requires_grad=False)
+        self.relevance = nn.Parameter(torch.ones(n_max, input_dim, device=self.device), requires_grad=True)
 
     def activation(self, w):
         dists = self.weighted_distance(w)
@@ -82,12 +82,12 @@ class SOM(nn.Module):
         new_nodes_idx = available_idx[:n_new_nodes].t()
 
         self.node_control[new_nodes_idx] = 1.
-        with torch.no_grad():
-            self.weights[new_nodes_idx] = new_nodes
+        self.weights[new_nodes_idx] = new_nodes
+        self.relevance[new_nodes_idx] = nn.Parameter(torch.ones(n_new_nodes, self.input_size, device=self.device),
+                                                 requires_grad=True)
+
         self.moving_avg[new_nodes_idx] = nn.Parameter(torch.zeros(n_new_nodes, self.input_size, device=self.device),
                                                       requires_grad=False)
-        self.relevance[new_nodes_idx] = nn.Parameter(torch.ones(n_new_nodes, self.input_size, device=self.device),
-                                                     requires_grad=False)
 
         return new_nodes_idx
 
@@ -111,9 +111,8 @@ class SOM(nn.Module):
         # if (max - min) == 0 or (mv_avg - avg) == 0 then set to 1
         self.relevance[self.relevance != self.relevance] = 1.
 
-        with torch.no_grad():
-            delta = torch.mul(self.lr, torch.sub(w, self.weights[index]))
-            self.weights[index] = torch.add(self.weights[index], delta)
+        delta = torch.mul(self.lr, torch.sub(w, self.weights[index]))
+        self.weights[index] = torch.add(self.weights[index], delta)
 
     def get_winners(self, input):
         activations = self.activation(input) * self.node_control
@@ -146,7 +145,8 @@ class SOM(nn.Module):
             # print("Samples High at: ", updatable_samples_hight_at)
             # print("-----------------------------")
 
-            self.update_node(updatable_samples_hight_at, unique_nodes_high_at)
+            with torch.no_grad():
+                self.update_node(updatable_samples_hight_at, unique_nodes_high_at)
 
             #print(unique_nodes_high_at)
             #exit(0)
@@ -158,15 +158,16 @@ class SOM(nn.Module):
         # if there is nodes to be inserted and positions available in the map
         if len(nodes_low_at) > 0 and self.node_control[self.node_control == 0].size(0) > 0:
             _, updatable_samples_low_at = self.unique_node_diff_vectorized(nodes_low_at, samples_low_at)
-            
-            idx = self.add_node(updatable_samples_low_at)
+
+            with torch.no_grad():
+                idx = self.add_node(updatable_samples_low_at)
             # print("------------- Create Node ----------------")
             # print("Node idx:", idx)
             # print("Node:", self.weights[unique_nodes_high_at])
             # print("Samples Low at: ", samples_low_at)
             # print("-----------------------------")
 
-        return updatable_samples_hight_at, self.weights[unique_nodes_high_at]
+        return updatable_samples_hight_at, self.weights[unique_nodes_high_at], self.relevance[unique_nodes_high_at]
 
     def unique_node_diff_vectorized(self, nodes, samples):
         unique_nodes, unique_nodes_counts = torch.unique(nodes, return_counts=True)
@@ -186,7 +187,7 @@ class SOM(nn.Module):
         for batch_idx, (inputs, targets) in enumerate(dataloader):
             feed_som = inputs
             if model is not None:
-                samples_high_at, weights_unique_nodes_high_at, outputs = model(inputs)
+                samples_high_at, weights_unique_nodes_high_at, _, outputs = model(inputs)
                 feed_som = outputs
             
             _, bmu_indexes = self.get_winners(feed_som.to(self.device))
