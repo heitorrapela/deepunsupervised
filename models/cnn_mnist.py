@@ -11,14 +11,16 @@ from models.som import SOM
 class Net(nn.Module):
     def __init__(self):
         super(Net, self).__init__()
+
+        self.som_input_size = 2
         self.conv1 = nn.Conv2d(1, 20, 5, 1)
         self.conv2 = nn.Conv2d(20, 50, 5, 1)
-        self.fc1 = nn.Linear(4*4*50, 2)
+        self.fc1 = nn.Linear(4 * 4 * 50, self.som_input_size)
         #self.fc2 = nn.Linear(500, 10)
 
         device = torch.device('cuda:0' if False else 'cpu')
         # som = SOM(input_size=3, device=device)
-        self.som = SOM(input_dim=2, device=device)
+        self.som = SOM(input_dim=self.som_input_size, device=device)
         self.som = self.som.to(device)
 
     def forward(self, x):
@@ -29,8 +31,9 @@ class Net(nn.Module):
         x = x.view(-1, 4*4*50)
         x = self.fc1(x)
         #  x = x.view(-1, 2)
-        x = F.log_softmax(x, dim=1)
-        #  print(x,x.size())
+        #x = F.log_softmax(x, dim=1)
+        x = torch.tanh(x)
+        #print(x, x.size())
         #  weights, relevance, losses = self.som(x)
         #  print(x,x.size())
         #  x = F.relu(self.fc1(x))

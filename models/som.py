@@ -7,7 +7,7 @@ import pandas as pd
 
 class SOM(nn.Module):
 
-    def __init__(self, input_dim, n_max=20, lr=0.1, at=0.99, dsbeta=0.0001, eps_ds=0.01, device='cpu'):
+    def __init__(self, input_dim, n_max=50, lr=0.01, at=0.990, dsbeta=0.1, eps_ds=0.5, device='cpu'):
         '''
         :param input_dim:
         :param n_max:
@@ -98,14 +98,16 @@ class SOM(nn.Module):
 
         maximum = torch.max(self.moving_avg[index], dim=1, keepdim=True)[0]
         minimum = torch.min(self.moving_avg[index], dim=1, keepdim=True)[0]
-        avg = torch.mean(self.moving_avg[index], dim=1, keepdim=True)[0]
+        avg = torch.mean(self.moving_avg[index], dim=1, keepdim=True)
 
+        # print("index:", index, "\nw: ", w, "\nweights: ", self.weights[index], "\ndist: ", distance, "\nmoving avg:", self.moving_avg[index], "\nmaximum:", maximum, "\nminimum:", minimum, "\navg:", avg)
         one_tensor = torch.tensor(1, dtype=torch.float, device=self.device)
 
         self.relevance[index] = torch.div(one_tensor,
                                           one_tensor + torch.exp(torch.div(torch.sub(self.moving_avg[index], avg),
                                                                            torch.mul(self.eps_ds,
                                                                                      torch.sub(maximum, minimum)))))
+        # print("relevances:", self.relevance)
         # if (max - min) == 0 or (mv_avg - avg) == 0 then set to 1
         self.relevance[self.relevance != self.relevance] = 1.
 
@@ -137,16 +139,17 @@ class SOM(nn.Module):
             self.node_control[nodes_high_at] = 1.
             unique_nodes_high_at, updatable_samples_hight_at = self.unique_node_diff_vectorized(nodes_high_at,
                                                                                                 samples_high_at)
-            self.update_node(updatable_samples_hight_at, unique_nodes_high_at)
-            
-            #  print("------------- Update Node ----------------")
-            #  print("Node:", self.weights[unique_nodes_high_at])
-            #  print("Node idx:", unique_nodes_high_at)
-            #  print("Samples High at: ", updatable_samples_hight_at)
-            #  print("-----------------------------")
+            # print("------------- Update Node ----------------")
+            # print("Nodes ids at high:", nodes_high_at)
+            # print("Node:", self.weights[unique_nodes_high_at])
+            # print("Node idx:", unique_nodes_high_at)
+            # print("Samples High at: ", updatable_samples_hight_at)
+            # print("-----------------------------")
 
-            #  print(unique_nodes_high_at)
-            #  exit(0)
+            self.update_node(updatable_samples_hight_at, unique_nodes_high_at)
+
+            #print(unique_nodes_high_at)
+            #exit(0)
 
         bool_low_at = act_max < self.at
         samples_low_at = input[bool_low_at]
@@ -157,9 +160,9 @@ class SOM(nn.Module):
             _, updatable_samples_low_at = self.unique_node_diff_vectorized(nodes_low_at, samples_low_at)
             
             idx = self.add_node(updatable_samples_low_at)
-            print("------------- Create Node ----------------")
-            print("Node idx:", idx)
-            # print("Node:", self.weights[idx])
+            # print("------------- Create Node ----------------")
+            # print("Node idx:", idx)
+            # print("Node:", self.weights[unique_nodes_high_at])
             # print("Samples Low at: ", samples_low_at)
             # print("-----------------------------")
 
@@ -173,7 +176,7 @@ class SOM(nn.Module):
         updatable_samples = torch.matmul(samples.t(), unique_nodes_idx.t().float())
         updatable_samples = torch.div(updatable_samples, unique_nodes_counts.float())
 
-        return unique_nodes.t(), updatable_samples.t()
+        return unique_nodes.t()[0], updatable_samples.t()
 
     def cluster(self, dataloader, model=None):
         clustering = pd.DataFrame(columns=['sample_ind', 'cluster'])

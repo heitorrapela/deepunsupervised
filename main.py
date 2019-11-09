@@ -99,8 +99,9 @@ def train_full_model(root, dataset_path, device, use_cuda, out_folder, epochs):
         cudnn.benchmark = True
 
     torch.manual_seed(1)
-    lr = 0.001
-    optimizer = optim.SGD(model.parameters(), lr=lr, momentum=0.5)
+    lr = 0.0001
+    #optimizer = optim.SGD(model.parameters(), lr=lr, momentum=0.5)
+    optimizer = optim.Adam(model.parameters(), lr=lr)
     loss = nn.MSELoss(reduction='sum')
 
     model.train()
@@ -129,8 +130,8 @@ def train_full_model(root, dataset_path, device, use_cuda, out_folder, epochs):
 
             samples_high_at, weights_unique_nodes_high_at, _ = model(sample)
 
-            if len(samples_high_at) > 0:  # if only new nodes were created, the loss is zero, no need to backprobagate it
-                weights_unique_nodes_high_at = weights_unique_nodes_high_at.view(-1, 2)
+            if len(samples_high_at) > 0:  #  if only new nodes were created, the loss is zero, no need to backprobagate it
+                weights_unique_nodes_high_at = weights_unique_nodes_high_at.view(-1, model.som_input_size)
 
                 out = loss(weights_unique_nodes_high_at, samples_high_at)
                 out.backward()
@@ -144,12 +145,10 @@ def train_full_model(root, dataset_path, device, use_cuda, out_folder, epochs):
             #                                                                        len(train_loader.dataset),
             #                                                                        100. * batch_idx / len(train_loader),
             #                                                                        out))
-
             avg_loss += out
             s += len(sample)
 
         print("Epoch: %d avg_loss: %.6f\n" % (epoch, avg_loss/s))
-
     ## Need to change train loader to test loader...
     model.eval()
 
@@ -183,7 +182,7 @@ def argument_parser():
     parser.add_argument('--root', type=str, default='raw-datasets/', help='Dataset Root folder')
     parser.add_argument('--dataset', type=str, default='mnist', help='Dataset Name')
     parser.add_argument('--out-folder', type=str, default='results/', help='Folder to output results')
-    parser.add_argument('--batch-size', type=int, default=1, help='input batch size')
+    parser.add_argument('--batch-size', type=int, default=2, help='input batch size')
 
     parser.add_argument('--epochs', type=int, default=50, help='input total epoch')
     parser.add_argument('--input-paths', default=None, help='Input Paths')
