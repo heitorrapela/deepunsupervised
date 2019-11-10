@@ -145,7 +145,8 @@ class SOM(nn.Module):
             # print("Samples High at: ", updatable_samples_hight_at)
             # print("-----------------------------")
 
-            self.update_node(updatable_samples_hight_at, unique_nodes_high_at)
+            with torch.no_grad():
+                self.update_node(updatable_samples_hight_at, unique_nodes_high_at)
 
             #print(unique_nodes_high_at)
             #exit(0)
@@ -158,7 +159,8 @@ class SOM(nn.Module):
         if len(nodes_low_at) > 0 and self.node_control[self.node_control == 0].size(0) > 0:
             _, updatable_samples_low_at = self.unique_node_diff_vectorized(nodes_low_at, samples_low_at)
 
-            idx = self.add_node(updatable_samples_low_at)
+            with torch.no_grad():
+                idx = self.add_node(updatable_samples_low_at)
 
             # print("------------- Create Node ----------------")
             # print("Node idx:", idx)
