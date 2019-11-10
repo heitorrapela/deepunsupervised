@@ -84,7 +84,7 @@ class SOM(nn.Module):
         self.node_control[new_nodes_idx] = 1.
         self.weights[new_nodes_idx] = new_nodes
         self.relevance[new_nodes_idx] = nn.Parameter(torch.ones(n_new_nodes, self.input_size, device=self.device),
-                                                 requires_grad=True)
+                                                     requires_grad=True)
 
         self.moving_avg[new_nodes_idx] = nn.Parameter(torch.zeros(n_new_nodes, self.input_size, device=self.device),
                                                       requires_grad=False)
@@ -160,7 +160,8 @@ class SOM(nn.Module):
             _, updatable_samples_low_at = self.unique_node_diff_vectorized(nodes_low_at, samples_low_at)
 
             with torch.no_grad():
-                idx = self.add_node(updatable_samples_low_at)
+                idx = self.add_node(updatable_samples_low_at, requires_grad=False)
+
             # print("------------- Create Node ----------------")
             # print("Node idx:", idx)
             # print("Node:", self.weights[unique_nodes_high_at])

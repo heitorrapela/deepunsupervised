@@ -85,8 +85,9 @@ def train_som(root, dataset_path, parameters, device, use_cuda, workers, out_fol
                                                                                                predict_labels)))
 
 
-def WeightedMSELoss(output, target, relevance):
+def weightedMSELoss(output, target, relevance):
     return torch.sum(relevance * (output - target) ** 2)
+
 
 def train_full_model(root, dataset_path, device, use_cuda, out_folder, epochs):
     dataset = Datasets(dataset=dataset_path, root_folder=root)
@@ -115,6 +116,7 @@ def train_full_model(root, dataset_path, device, use_cuda, out_folder, epochs):
 
         # Self-Organize
         for batch_idx, (sample, target) in enumerate(train_loader):
+            sample, target = sample.to(device), target.to(device)
             model(sample)
 
         cluster_result, predict_labels, true_labels = model.cluster(test_loader, model)
@@ -141,7 +143,7 @@ def train_full_model(root, dataset_path, device, use_cuda, out_folder, epochs):
 
                 # out = loss(samples_high_at, weights_unique_nodes_high_at)
                 # print("msel out:", out)
-                out = WeightedMSELoss(samples_high_at, weights_unique_nodes_high_at, relevances)
+                out = weightedMSELoss(samples_high_at, weights_unique_nodes_high_at, relevances)
                 # print("wmes out:", out)
                 out.backward()
                 optimizer.step()
