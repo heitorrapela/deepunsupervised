@@ -29,9 +29,9 @@ class SOM(nn.Module):
         self.device = torch.device(device)
 
         self.node_control = nn.Parameter(torch.zeros(n_max, device=self.device), requires_grad=False)
-        self.weights = nn.Parameter(torch.zeros(n_max, input_dim, device=self.device), requires_grad=True)
+        self.weights = nn.Parameter(torch.zeros(n_max, input_dim, device=self.device), requires_grad=False)
         self.moving_avg = nn.Parameter(torch.zeros(n_max, input_dim, device=self.device), requires_grad=False)
-        self.relevance = nn.Parameter(torch.ones(n_max, input_dim, device=self.device), requires_grad=True)
+        self.relevance = nn.Parameter(torch.ones(n_max, input_dim, device=self.device), requires_grad=False)
 
     def activation(self, w):
         dists = self.weighted_distance(w)
@@ -84,7 +84,7 @@ class SOM(nn.Module):
         self.node_control[new_nodes_idx] = 1.
         self.weights[new_nodes_idx] = new_nodes
         self.relevance[new_nodes_idx] = nn.Parameter(torch.ones(n_new_nodes, self.input_size, device=self.device),
-                                                     requires_grad=True)
+                                                     requires_grad=False)
 
         self.moving_avg[new_nodes_idx] = nn.Parameter(torch.zeros(n_new_nodes, self.input_size, device=self.device),
                                                       requires_grad=False)
@@ -145,8 +145,7 @@ class SOM(nn.Module):
             # print("Samples High at: ", updatable_samples_hight_at)
             # print("-----------------------------")
 
-            with torch.no_grad():
-                self.update_node(updatable_samples_hight_at, unique_nodes_high_at)
+            self.update_node(updatable_samples_hight_at, unique_nodes_high_at)
 
             #print(unique_nodes_high_at)
             #exit(0)
@@ -159,8 +158,7 @@ class SOM(nn.Module):
         if len(nodes_low_at) > 0 and self.node_control[self.node_control == 0].size(0) > 0:
             _, updatable_samples_low_at = self.unique_node_diff_vectorized(nodes_low_at, samples_low_at)
 
-            with torch.no_grad():
-                idx = self.add_node(updatable_samples_low_at, requires_grad=False)
+            idx = self.add_node(updatable_samples_low_at)
 
             # print("------------- Create Node ----------------")
             # print("Node idx:", idx)
