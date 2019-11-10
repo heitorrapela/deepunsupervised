@@ -10,16 +10,18 @@ from models.som import SOM
 
 
 class Net(nn.Module):
-    def __init__(self, device='cpu'):
+    def __init__(self, device='cpu', som_input=2,filters_list=[20,50],kernel_size_list=[5,5],padding_size_list=[1,1]):
         super(Net, self).__init__()
 
-        self.som_input_size = 2
-        self.conv1 = nn.Conv2d(1, 20, 5, 1)
-        self.conv2 = nn.Conv2d(20, 50, 5, 1)
-        self.fc1 = nn.Linear(4 * 4 * 50, self.som_input_size)
-        
+        self.som_input_size = som_input
+        self.filters_list = filters_list
+        self.kernel_size_list = kernel_size_list
+        self.padding_size_list = padding_size_list
+        self.conv1 = nn.Conv2d(1, self.filters_list[0], self.kernel_size_list[0], self.padding_size_list[0])
+        self.conv2 = nn.Conv2d(self.filters_list[0], self.filters_list[1], self.kernel_size_list[1], self.padding_size_list[1])
+        self.fc1 = nn.Linear(4 * 4 * self.filters_list[-1], self.som_input_size)
         self.device = device
-        self.som = SOM(input_dim=self.som_input_size, device=self.device)
+        self.som = SOM(input_dim = self.som_input_size, device = self.device)
         self.som = self.som.to(self.device)
 
     def cnn_extract_features(self, x):
@@ -27,7 +29,7 @@ class Net(nn.Module):
         x = F.max_pool2d(x, 2, 2)
         x = F.relu(self.conv2(x))
         x = F.max_pool2d(x, 2, 2)
-        x = x.view(-1, 4*4*50)
+        x = x.view(-1, 4*4*self.filters_list[-1])
         x = self.fc1(x)
         x = torch.tanh(x)
         return x
