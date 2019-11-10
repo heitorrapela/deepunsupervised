@@ -15,6 +15,7 @@ import torch
 import torch.nn as nn
 from utils import utils
 from utils.plot import *
+import numpy as np
 
 
 def train_som(root, dataset_path, parameters, device, use_cuda, workers, out_folder,
@@ -157,19 +158,20 @@ def train_full_model(root, dataset_path, device, use_cuda, out_folder, epochs):
             avg_loss += out
             s += len(sample)
 
-        # samples = None
-        # t = None
-        # for batch_idx, (inputs, targets) in enumerate(train_loader):
-        #     samples_high_at, weights_unique_nodes_high_at, relevances, outputs = model(inputs)
-        #
-        #     if samples is None:
-        #         samples = outputs.detach().numpy()
-        #         t = targets.detach().numpy()
-        #     else:
-        #         samples = np.append(samples, outputs.detach().numpy(), axis=0)
-        #         t = np.append(t, targets.detach().numpy(), axis=0)
-        #
-        # plot_data(samples, t)
+        samples = None
+        t = None
+        for batch_idx, (inputs, targets) in enumerate(train_loader):
+            samples_high_at, weights_unique_nodes_high_at, relevances, outputs = model(inputs)
+
+            if samples is None:
+                samples = outputs.detach().numpy()
+                t = targets.detach().numpy()
+            else:
+                samples = np.append(samples, outputs.detach().numpy(), axis=0)
+                t = np.append(t, targets.detach().numpy(), axis=0)
+
+        centers, relevances, ma = model.som.get_prototypes()
+        plot_data(samples, t, centers, relevances*0.1)
 
         print("Epoch: %d avg_loss: %.6f\n" % (epoch, avg_loss/s))
 
