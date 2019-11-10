@@ -10,6 +10,7 @@ Deep Unsupevised Learning
 	Pandas
 	Scipy
 	Scikit-Learn
+	Matplotlib
 
 ## Creating conda env
 
@@ -20,3 +21,4 @@ Deep Unsupevised Learning
     conda install scipy
     conda install scikit-learn
  	conda install -c omnia munkres 
+ 	conda install matplotlib

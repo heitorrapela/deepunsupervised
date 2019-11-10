@@ -92,7 +92,7 @@ def train_full_model(root, dataset_path, device, use_cuda, out_folder, epochs):
     train_loader = DataLoader(dataset.train_data, batch_size=batch_size, shuffle=True)
     test_loader = DataLoader(dataset.test_data, shuffle=False)
 
-    model = Net(device=device)
+    model = Net(device=device).to(device)
 
     manual_seed = 1
     random.seed(manual_seed)
@@ -103,7 +103,6 @@ def train_full_model(root, dataset_path, device, use_cuda, out_folder, epochs):
         model.cuda()
         cudnn.benchmark = True
 
-    torch.manual_seed(1)
     lr = 0.00001
     #optimizer = optim.SGD(model.parameters(), lr=lr, momentum=0.5)
     optimizer = optim.Adam(model.parameters(), lr=lr)
@@ -160,17 +159,17 @@ def train_full_model(root, dataset_path, device, use_cuda, out_folder, epochs):
         samples = None
         t = None
         for batch_idx, (inputs, targets) in enumerate(train_loader):
-            samples_high_at, weights_unique_nodes_high_at, relevances, outputs = model(inputs)
+            samples_high_at, weights_unique_nodes_high_at, relevances, outputs = model(inputs.to(device))
 
             if samples is None:
-                samples = outputs.detach().numpy()
-                t = targets.detach().numpy()
+                samples = outputs.cpu().detach().numpy()
+                t = targets.cpu().detach().numpy()
             else:
-                samples = np.append(samples, outputs.detach().numpy(), axis=0)
-                t = np.append(t, targets.detach().numpy(), axis=0)
+                samples = np.append(samples, outputs.cpu().detach().numpy(), axis=0)
+                t = np.append(t, targets.cpu().detach().numpy(), axis=0)
 
         centers, relevances, ma = model.som.get_prototypes()
-        plot_data(samples, t, centers, relevances*0.1)
+        plot_data(samples, t, centers.cpu(), relevances.cpu()*0.1)
 
         print("Epoch: %d avg_loss: %.6f\n" % (epoch, avg_loss/s))
 
