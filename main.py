@@ -55,12 +55,11 @@ def train_som(root, dataset_path, parameters, device, use_cuda, workers, out_fol
             for batch_idx, (sample, target) in enumerate(train_loader):
                 sample, target = sample.to(device), target.to(device)
 
-                som_loss = som(sample)
+                som(sample)
                 if batch_idx % args.log_interval == 0:
-                    print('{0} id {1} [epoch: {2}] Loss: {3:.6f}'.format(dataset_path,
+                    print('{0} id {1} [epoch: {2}]'.format(dataset_path,
                                                                          int(params / parameters_count),
-                                                                         epoch,
-                                                                         som_loss))
+                                                                         epoch))
 
                 # if evaluate and batch_idx % args.eval_interval == 0:
                 #     _, predict_labels, true_labels = som.cluster(test_loader)
@@ -252,8 +251,8 @@ if __name__ == '__main__':
 
     # if input_paths is None:
     #     train_som(root=root, dataset_path=dataset_path, parameters=parameters, device=device, use_cuda=use_cuda,
-    #               workers=args.workers, out_folder=out_folder, n_max=n_max, epochs=epochs, evaluate=args.eval)
+    #               workers=args.workers, out_folder=out_folder, n_max=n_max, evaluate=args.eval)
     # else:
     #     for i, train_path in enumerate(input_paths):
     #         train_som(root=root, dataset_path=train_path, parameters=parameters, device=device, use_cuda=use_cuda,
-    #                   workers=args.workers, out_folder=out_folder, n_max=n_max, epochs=epochs, evaluate=args.eval)
+    #                   workers=args.workers, out_folder=out_folder, n_max=n_max, evaluate=args.eval)

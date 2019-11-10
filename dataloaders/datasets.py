@@ -18,11 +18,12 @@ class Datasets(data.Dataset):
 
         transform_list = [transforms.ToTensor()]
 
-        if flatten:
-            transform_list.append(ReshapeTransform((-1,)))
-
         if dataset == "mnist":
             transform_list.append(transforms.Normalize((0.1307,), (0.3081,)))
+
+            if flatten:
+                transform_list.append(ReshapeTransform((-1,)))
+
             transform = transforms.Compose(transform_list)
 
             self.train_data = datasets.MNIST(root=root_folder, train=True, download=True, transform=transform)
@@ -33,6 +34,10 @@ class Datasets(data.Dataset):
             self.dim_flatten = self.train_data.data.size(1) * self.train_data.data.size(2)
 
         elif dataset == "fashion":
+
+            if flatten:
+                transform_list.append(ReshapeTransform((-1,)))
+
             transform = transforms.Compose(transform_list)
 
             self.train_data = datasets.FashionMNIST(root=root_folder, train=True, download=True, transform=transform)
@@ -40,6 +45,10 @@ class Datasets(data.Dataset):
             self.dim_flatten = self.train_data.data.size(1) * self.train_data.data.size(2)
 
         elif dataset == "cifar10":
+
+            if flatten:
+                transform_list.append(ReshapeTransform((-1,)))
+
             transform = transforms.Compose(transform_list)
 
             self.train_data = datasets.CIFAR10(root=root_folder, train=True, download=True, transform=transform)
@@ -48,6 +57,10 @@ class Datasets(data.Dataset):
             self.dim_flatten = data_shape[1] * data_shape[2] * data_shape[3]
 
         elif dataset == "cifar100":
+
+            if flatten:
+                transform_list.append(ReshapeTransform((-1,)))
+
             transform = transforms.Compose(transform_list)
 
             self.train_data = datasets.CIFAR100(root=root_folder, train=True, download=True, transform=transform)
@@ -56,6 +69,10 @@ class Datasets(data.Dataset):
             self.dim_flatten = data_shape[1] * data_shape[2] * data_shape[3]
 
         elif dataset == "svhn":
+
+            if flatten:
+                transform_list.append(ReshapeTransform((-1,)))
+
             transform = transforms.Compose(transform_list)
 
             self.train_data = datasets.SVHN(root=root_folder, split='train', download=True, transform=transform)
