@@ -22,30 +22,18 @@ class Net(nn.Module):
         self.som = SOM(input_dim=self.som_input_size, device=self.device)
         self.som = self.som.to(self.device)
 
-    def forward(self, x):
+    def cnn_extract_features(self, x):
         x = F.relu(self.conv1(x))
         x = F.max_pool2d(x, 2, 2)
         x = F.relu(self.conv2(x))
         x = F.max_pool2d(x, 2, 2)
         x = x.view(-1, 4*4*50)
         x = self.fc1(x)
-        #x = F.log_softmax(x, dim=1)
         x = torch.tanh(x)
-
-        samples_high_at, weights_unique_nodes_high_at, relevances = self.som(x)
-
-        return samples_high_at, weights_unique_nodes_high_at, relevances, x
-
-    '''
-    def forward_cluster(self, x):
-        x = F.relu(self.conv1(x))
-        x = F.max_pool2d(x, 2, 2)
-        x = F.relu(self.conv2(x))
-        x = F.max_pool2d(x, 2, 2)
-        x = x.view(-1, 4*4*50)
-        #x = F.log_softmax(x, dim=1)
         return x
-    '''
+
+    def forward(self, x):
+        return self.som(self.cnn_extract_features(x))
     
     def cluster(self, dataloader):
         clustering = pd.DataFrame(columns=['sample_ind', 'cluster'])
@@ -53,11 +41,10 @@ class Net(nn.Module):
         true_labels = []
 
         for batch_idx, (inputs, targets) in enumerate(dataloader):
-            samples_high_at, weights_unique_nodes_high_at, _, outputs = self.forward(inputs.to(self.device))
 
+            outputs = self.cnn_extract_features(inputs.to(self.device))
             _, bmu_indexes = self.som.get_winners(outputs.to(self.device))
             ind_max = bmu_indexes.item()
-
             clustering = clustering.append({'sample_ind': batch_idx,
                                             'cluster': ind_max},
                                            ignore_index=True)

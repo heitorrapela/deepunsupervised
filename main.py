@@ -116,6 +116,7 @@ def train_full_model(root, dataset_path, device, use_cuda, out_folder, epochs):
             sample, target = sample.to(device), target.to(device)
             model(sample)
 
+
         cluster_result, predict_labels, true_labels = model.cluster(test_loader)
         print("Homogeneity: %0.3f" % metrics.cluster.homogeneity_score(true_labels, predict_labels))
         print("Completeness: %0.3f" % metrics.cluster.completeness_score(true_labels, predict_labels))
@@ -133,7 +134,7 @@ def train_full_model(root, dataset_path, device, use_cuda, out_folder, epochs):
             sample, target = sample.to(device), target.to(device)
             optimizer.zero_grad()
 
-            samples_high_at, weights_unique_nodes_high_at, relevances, _ = model(sample)
+            samples_high_at, weights_unique_nodes_high_at, relevances = model(sample)
 
             if len(samples_high_at) > 0:  #  if only new nodes were created, the loss is zero, no need to backprobagate it
                 weights_unique_nodes_high_at = weights_unique_nodes_high_at.view(-1, model.som_input_size)
@@ -158,9 +159,10 @@ def train_full_model(root, dataset_path, device, use_cuda, out_folder, epochs):
 
         samples = None
         t = None
-        for batch_idx, (inputs, targets) in enumerate(train_loader):
-            samples_high_at, weights_unique_nodes_high_at, relevances, outputs = model(inputs.to(device))
 
+        ## Calculate metrics or plot without change SOM map
+        for batch_idx, (inputs, targets) in enumerate(train_loader):
+            outputs = model.cnn_extract_features(inputs.to(device))
             if samples is None:
                 samples = outputs.cpu().detach().numpy()
                 t = targets.cpu().detach().numpy()
@@ -170,10 +172,10 @@ def train_full_model(root, dataset_path, device, use_cuda, out_folder, epochs):
 
         centers, relevances, ma = model.som.get_prototypes()
         plot_data(samples, t, centers.cpu(), relevances.cpu()*0.1)
-
         print("Epoch: %d avg_loss: %.6f\n" % (epoch, avg_loss/s))
 
     plot_hold()
+
     ## Need to change train loader to test loader...
     model.eval()
 
