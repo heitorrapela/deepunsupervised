@@ -13,10 +13,8 @@ from models.cnn_mnist import Net
 import torch.optim as optim
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from utils import utils
 from utils.plot import *
-import numpy as np
 
 
 def train_som(root, dataset_path, parameters, device, use_cuda, workers, out_folder,
@@ -74,7 +72,7 @@ def train_som(root, dataset_path, parameters, device, use_cuda, workers, out_fol
 
         cluster_result, predict_labels, true_labels = som.cluster(test_loader)
         filename = dataset_path.split(".arff")[0] + "_" + str(int(params / parameters_count)) + ".results"
-        utils.write_som_output(som, join(out_folder, filename), cluster_result)
+        som.write_output(join(out_folder, filename), cluster_result)
 
         if evaluate:
             print('{0} id {1}\tCE: {4:.6f}'.format(dataset_path,
@@ -94,7 +92,7 @@ def train_full_model(root, dataset_path, device, use_cuda, out_folder, epochs):
     train_loader = DataLoader(dataset.train_data, batch_size=batch_size, shuffle=True)
     test_loader = DataLoader(dataset.test_data, shuffle=False)
 
-    model = Net()
+    model = Net(device=device)
 
     manual_seed = 1
     random.seed(manual_seed)
@@ -119,7 +117,7 @@ def train_full_model(root, dataset_path, device, use_cuda, out_folder, epochs):
             sample, target = sample.to(device), target.to(device)
             model(sample)
 
-        cluster_result, predict_labels, true_labels = model.cluster(test_loader, model)
+        cluster_result, predict_labels, true_labels = model.cluster(test_loader)
         print("Homogeneity: %0.3f" % metrics.cluster.homogeneity_score(true_labels, predict_labels))
         print("Completeness: %0.3f" % metrics.cluster.completeness_score(true_labels, predict_labels))
         print("V-measure: %0.3f" % metrics.cluster.v_measure_score(true_labels, predict_labels))
@@ -159,19 +157,19 @@ def train_full_model(root, dataset_path, device, use_cuda, out_folder, epochs):
             avg_loss += out
             s += len(sample)
 
-        samples = None
-        t = None
-        for batch_idx, (inputs, targets) in enumerate(train_loader):
-            samples_high_at, weights_unique_nodes_high_at, relevances, outputs = model(inputs)
-
-            if samples is None:
-                samples = outputs.detach().numpy()
-                t = targets.detach().numpy()
-            else:
-                samples = np.append(samples, outputs.detach().numpy(), axis=0)
-                t = np.append(t, targets.detach().numpy(), axis=0)
-
-        plot_data(samples, t)
+        # samples = None
+        # t = None
+        # for batch_idx, (inputs, targets) in enumerate(train_loader):
+        #     samples_high_at, weights_unique_nodes_high_at, relevances, outputs = model(inputs)
+        #
+        #     if samples is None:
+        #         samples = outputs.detach().numpy()
+        #         t = targets.detach().numpy()
+        #     else:
+        #         samples = np.append(samples, outputs.detach().numpy(), axis=0)
+        #         t = np.append(t, targets.detach().numpy(), axis=0)
+        #
+        # plot_data(samples, t)
 
         print("Epoch: %d avg_loss: %.6f\n" % (epoch, avg_loss/s))
 
@@ -181,7 +179,7 @@ def train_full_model(root, dataset_path, device, use_cuda, out_folder, epochs):
 
     print("Train Finished", flush=True)
 
-    cluster_result, predict_labels, true_labels = model.cluster(test_loader, model)
+    cluster_result, predict_labels, true_labels = model.cluster(test_loader)
 
     if not os.path.exists(join(args.out_folder, args.dataset.split(".arff")[0])):
         os.makedirs(join(args.out_folder, args.dataset.split(".arff")[0]))
@@ -191,7 +189,7 @@ def train_full_model(root, dataset_path, device, use_cuda, out_folder, epochs):
     print("V-measure: %0.3f" % metrics.cluster.v_measure_score(true_labels, predict_labels))
 
     filename = dataset_path.split(".arff")[0] + ".results"
-    utils.write_som_output(model.som, join(out_folder, filename), cluster_result)
+    model.write_output(join(out_folder, filename), cluster_result)
 
     print('{0} \tCE: {1:.3f}'.format(dataset_path,
                                      metrics.cluster.predict_to_clustering_error(true_labels, predict_labels)))

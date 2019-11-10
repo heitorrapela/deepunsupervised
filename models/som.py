@@ -3,6 +3,7 @@
 import torch
 import torch.nn as nn
 import pandas as pd
+import re
 
 
 class SOM(nn.Module):
@@ -178,20 +179,15 @@ class SOM(nn.Module):
         updatable_samples = torch.matmul(samples.t(), unique_nodes_idx.t().float())
         updatable_samples = torch.div(updatable_samples, unique_nodes_counts.float())
 
-        return unique_nodes.t()[0], updatable_samples.t()
+        return unique_nodes.t().squeeze(-1), updatable_samples.t()
 
-    def cluster(self, dataloader, model=None):
+    def cluster(self, dataloader):
         clustering = pd.DataFrame(columns=['sample_ind', 'cluster'])
         predict_labels = []
         true_labels = []
 
         for batch_idx, (inputs, targets) in enumerate(dataloader):
-            feed_som = inputs
-            if model is not None:
-                samples_high_at, weights_unique_nodes_high_at, _, outputs = model(inputs)
-                feed_som = outputs
-            
-            _, bmu_indexes = self.get_winners(feed_som.to(self.device))
+            _, bmu_indexes = self.get_winners(inputs.to(self.device))
             ind_max = bmu_indexes.item()
 
             clustering = clustering.append({'sample_ind': batch_idx,
@@ -200,10 +196,24 @@ class SOM(nn.Module):
             predict_labels.append(ind_max)
             true_labels.append(targets.item())
 
-            # print("----------------------------------------------")
-            # print("Saida CNN: ", outputs)
-            # print("Prototipo: ", weights_unique_nodes_high_at)
-            # print("Index: ", ind_max)
-            # print("----------------------------------------------")
-
         return clustering, predict_labels, true_labels
+
+    def write_output(self, output_path, cluster_result):
+        print(output_path)
+        output_file = open(output_path, 'w+')
+
+        n_clusters = self.node_control[self.node_control == 1].size(0)
+
+        content = str(n_clusters) + "\t" + str(self.input_size) + "\n"
+        for i, relevance in enumerate(self.relevance):
+            if self.node_control[i] == 1:
+                with torch.no_grad():
+                    content += str(i) + "\t" + "\t".join(map(str, relevance.detach().numpy())) + "\n"
+
+        result_text = cluster_result.to_string(header=False, index=False).strip()
+        result_text = re.sub('\n +', '\n', result_text)
+        result_text = re.sub(' +', '\t', result_text)
+
+        content += result_text
+        output_file.write(content)
+        output_file.close()

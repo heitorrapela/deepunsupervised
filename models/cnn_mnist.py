@@ -3,13 +3,14 @@ import argparse
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import pandas as pd
 import torch.optim as optim
 from torchvision import datasets, transforms
 from models.som import SOM
 
 
 class Net(nn.Module):
-    def __init__(self):
+    def __init__(self, device='cpu'):
         super(Net, self).__init__()
 
         self.som_input_size = 2
@@ -18,10 +19,10 @@ class Net(nn.Module):
         self.fc1 = nn.Linear(4 * 4 * 50, self.som_input_size)
         #self.fc2 = nn.Linear(500, 10)
 
-        device = torch.device('cuda:0' if False else 'cpu')
+        self.device = device
         # som = SOM(input_size=3, device=device)
-        self.som = SOM(input_dim=self.som_input_size, device=device)
-        self.som = self.som.to(device)
+        self.som = SOM(input_dim=self.som_input_size, device=self.device)
+        self.som = self.som.to(self.device)
 
     def forward(self, x):
         x = F.relu(self.conv1(x))
@@ -57,12 +58,33 @@ class Net(nn.Module):
         #x = F.log_softmax(x, dim=1)
         return x
     '''
-    def cluster(self, dataloader,model):
-        return self.som.cluster(dataloader,model)
+    def cluster(self, dataloader):
+        clustering = pd.DataFrame(columns=['sample_ind', 'cluster'])
+        predict_labels = []
+        true_labels = []
 
-    def write_output(self,output_path,result):
-        print(output_path)
-        self.som.write_output(output_path, result)
+        for batch_idx, (inputs, targets) in enumerate(dataloader):
+            samples_high_at, weights_unique_nodes_high_at, _, outputs = self.forward(inputs)
+
+            _, bmu_indexes = self.som.get_winners(outputs.to(self.device))
+            ind_max = bmu_indexes.item()
+
+            clustering = clustering.append({'sample_ind': batch_idx,
+                                            'cluster': ind_max},
+                                           ignore_index=True)
+            predict_labels.append(ind_max)
+            true_labels.append(targets.item())
+
+            # print("----------------------------------------------")
+            # print("Saida CNN: ", outputs)
+            # print("Prototipo: ", weights_unique_nodes_high_at)
+            # print("Index: ", ind_max)
+            # print("----------------------------------------------")
+
+        return clustering, predict_labels, true_labels
+
+    def write_output(self, output_path, cluster_result):
+        self.som.write_output(output_path, cluster_result)
 
 
 def train(args, model, device, train_loader, optimizer, epoch):
