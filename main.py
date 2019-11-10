@@ -171,7 +171,8 @@ def train_full_model(root, dataset_path, device, use_cuda, out_folder, epochs):
                 samples = np.append(samples, outputs.detach().numpy(), axis=0)
                 t = np.append(t, targets.detach().numpy(), axis=0)
 
-        plot_data(samples, t)
+        centers, relevances, ma = model.som.get_prototypes()
+        plot_data(samples, t, centers, relevances*0.1)
 
         print("Epoch: %d avg_loss: %.6f\n" % (epoch, avg_loss/s))
 

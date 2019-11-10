@@ -7,7 +7,7 @@ import pandas as pd
 
 class SOM(nn.Module):
 
-    def __init__(self, input_dim, n_max=100, lr=0.02, at=0.985, dsbeta=0.1, eps_ds=0.5, device='cpu'):
+    def __init__(self, input_dim, n_max=20, lr=0.1, at=0.985, dsbeta=0.5, eps_ds=1., device='cpu'):
         '''
         :param input_dim:
         :param n_max:
@@ -93,7 +93,7 @@ class SOM(nn.Module):
 
     def update_node(self, w, index):
         distance = torch.abs(torch.sub(w, self.weights[index]))
-        self.moving_avg[index] = torch.mul(self.lr * self.dsbeta, distance) + torch.mul(1 - self.lr * self.dsbeta,
+        self.moving_avg[index] = torch.mul(self.lr * self.dsbeta, distance) + torch.mul(1 - (self.lr * self.dsbeta),
                                                                                         self.moving_avg[index])
 
         maximum = torch.max(self.moving_avg[index], dim=1, keepdim=True)[0]
@@ -117,6 +117,9 @@ class SOM(nn.Module):
     def get_winners(self, input):
         activations = self.activation(input) * self.node_control
         return torch.max(activations, dim=1)
+
+    def get_prototypes(self):
+        return self.weights[self.node_control != 0], self.relevance[self.node_control != 0], self.moving_avg[self.node_control != 0]
 
     def forward(self, input, lr=0.01):
         '''
