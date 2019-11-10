@@ -7,7 +7,7 @@ import pandas as pd
 
 class SOM(nn.Module):
 
-    def __init__(self, input_dim, n_max=100, lr=0.02, at=0.98, dsbeta=0.1, eps_ds=0.5, device='cpu'):
+    def __init__(self, input_dim, n_max=100, lr=0.02, at=0.985, dsbeta=0.1, eps_ds=0.5, device='cpu'):
         '''
         :param input_dim:
         :param n_max:

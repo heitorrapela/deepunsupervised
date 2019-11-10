@@ -15,6 +15,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from utils import utils
+from utils.plot import *
+import numpy as np
 
 
 def train_som(root, dataset_path, parameters, device, use_cuda, workers, out_folder,
@@ -83,7 +85,7 @@ def train_som(root, dataset_path, parameters, device, use_cuda, workers, out_fol
                                                                                                predict_labels)))
 
 
-def WaitedMSELoss(output, target, relevance):
+def WeightedMSELoss(output, target, relevance):
     return torch.sum(relevance * (output - target) ** 2)
 
 def train_full_model(root, dataset_path, device, use_cuda, out_folder, epochs):
@@ -139,7 +141,7 @@ def train_full_model(root, dataset_path, device, use_cuda, out_folder, epochs):
 
                 # out = loss(samples_high_at, weights_unique_nodes_high_at)
                 # print("msel out:", out)
-                out = WaitedMSELoss(samples_high_at, weights_unique_nodes_high_at, relevances)
+                out = WeightedMSELoss(samples_high_at, weights_unique_nodes_high_at, relevances)
                 # print("wmes out:", out)
                 out.backward()
                 optimizer.step()
@@ -155,7 +157,23 @@ def train_full_model(root, dataset_path, device, use_cuda, out_folder, epochs):
             avg_loss += out
             s += len(sample)
 
+        samples = None
+        t = None
+        for batch_idx, (inputs, targets) in enumerate(train_loader):
+            samples_high_at, weights_unique_nodes_high_at, relevances, outputs = model(inputs)
+
+            if samples is None:
+                samples = outputs.detach().numpy()
+                t = targets.detach().numpy()
+            else:
+                samples = np.append(samples, outputs.detach().numpy(), axis=0)
+                t = np.append(t, targets.detach().numpy(), axis=0)
+
+        plot_data(samples, t)
+
         print("Epoch: %d avg_loss: %.6f\n" % (epoch, avg_loss/s))
+
+    plot_hold()
     ## Need to change train loader to test loader...
     model.eval()
 
@@ -191,7 +209,7 @@ def argument_parser():
     parser.add_argument('--out-folder', type=str, default='results/', help='Folder to output results')
     parser.add_argument('--batch-size', type=int, default=2, help='input batch size')
 
-    parser.add_argument('--epochs', type=int, default=60, help='input total epoch')
+    parser.add_argument('--epochs', type=int, default=80, help='input total epoch')
     parser.add_argument('--input-paths', default=None, help='Input Paths')
     parser.add_argument('--nmax', type=int, default=None, help='number of nodes')
     parser.add_argument('--params-file', default=None, help='Parameters')
