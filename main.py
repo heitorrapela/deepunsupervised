@@ -56,10 +56,10 @@ def train_som(root, dataset_path, parameters, device, use_cuda, workers, out_fol
                 sample, target = sample.to(device), target.to(device)
 
                 som(sample)
-                if batch_idx % args.log_interval == 0:
-                    print('{0} id {1} [epoch: {2}]'.format(dataset_path,
-                                                                         int(params / parameters_count),
-                                                                         epoch))
+                # if batch_idx % args.log_interval == 0:
+                #     print('{0} id {1} [epoch: {2}]'.format(dataset_path,
+                #                                            int(params / parameters_count),
+                #                                            epoch))
 
                 # if evaluate and batch_idx % args.eval_interval == 0:
                 #     _, predict_labels, true_labels = som.cluster(test_loader)
@@ -92,7 +92,7 @@ def train_full_model(root, dataset_path, device, use_cuda, out_folder, epochs):
     train_loader = DataLoader(dataset.train_data, batch_size=batch_size, shuffle=True)
     test_loader = DataLoader(dataset.test_data, shuffle=False)
 
-    model = Net(device=device).to(device)
+    model = Net(device=device)
 
     manual_seed = 1
     random.seed(manual_seed)
@@ -162,7 +162,9 @@ def train_full_model(root, dataset_path, device, use_cuda, out_folder, epochs):
 
         ## Calculate metrics or plot without change SOM map
         for batch_idx, (inputs, targets) in enumerate(train_loader):
-            outputs = model.cnn_extract_features(inputs.to(device))
+            inputs, targets = inputs.to(device), targets.to(device)
+            outputs = model.cnn_extract_features(inputs)
+
             if samples is None:
                 samples = outputs.cpu().detach().numpy()
                 t = targets.cpu().detach().numpy()
@@ -216,6 +218,8 @@ def argument_parser():
     parser.add_argument('--nmax', type=int, default=None, help='number of nodes')
     parser.add_argument('--params-file', default=None, help='Parameters')
 
+    parser.add_argument('--som-only', default=True, help='Som-Only Mode')
+
     return parser.parse_args()
 
 
@@ -248,12 +252,14 @@ if __name__ == '__main__':
     parameters = utils.read_lines(args.params_file) if args.params_file is not None else None
     n_max = args.nmax
 
-    train_full_model(root, dataset_path, device, use_cuda, out_folder, epochs)
+    if args.som_only:
+        if input_paths is None:
+            train_som(root=root, dataset_path=dataset_path, parameters=parameters, device=device, use_cuda=use_cuda,
+                      workers=args.workers, out_folder=out_folder, n_max=n_max, evaluate=args.eval)
+        else:
+            for i, train_path in enumerate(input_paths):
+                train_som(root=root, dataset_path=train_path, parameters=parameters, device=device, use_cuda=use_cuda,
+                          workers=args.workers, out_folder=out_folder, n_max=n_max, evaluate=args.eval)
 
-    # if input_paths is None:
-    #     train_som(root=root, dataset_path=dataset_path, parameters=parameters, device=device, use_cuda=use_cuda,
-    #               workers=args.workers, out_folder=out_folder, n_max=n_max, evaluate=args.eval)
-    # else:
-    #     for i, train_path in enumerate(input_paths):
-    #         train_som(root=root, dataset_path=train_path, parameters=parameters, device=device, use_cuda=use_cuda,
-    #                   workers=args.workers, out_folder=out_folder, n_max=n_max, evaluate=args.eval)
+    else:
+        train_full_model(root, dataset_path, device, use_cuda, out_folder, epochs)

@@ -1,27 +1,30 @@
 from __future__ import print_function
-import argparse
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import pandas as pd
-import torch.optim as optim
-from torchvision import datasets, transforms
 from models.som import SOM
 
 
 class Net(nn.Module):
-    def __init__(self, device='cpu', som_input=2,filters_list=[20,50],kernel_size_list=[5,5],padding_size_list=[1,1]):
+    def __init__(self, device='cpu', som_input=2, filters_list=[20, 50],
+                 kernel_size_list=[5, 5], padding_size_list=[1, 1]):
         super(Net, self).__init__()
 
         self.som_input_size = som_input
         self.filters_list = filters_list
         self.kernel_size_list = kernel_size_list
         self.padding_size_list = padding_size_list
-        self.conv1 = nn.Conv2d(1, self.filters_list[0], self.kernel_size_list[0], self.padding_size_list[0])
-        self.conv2 = nn.Conv2d(self.filters_list[0], self.filters_list[1], self.kernel_size_list[1], self.padding_size_list[1])
+        self.conv1 = nn.Conv2d(1, self.filters_list[0],
+                               self.kernel_size_list[0],
+                               self.padding_size_list[0])
+        self.conv2 = nn.Conv2d(self.filters_list[0],
+                               self.filters_list[1],
+                               self.kernel_size_list[1],
+                               self.padding_size_list[1])
         self.fc1 = nn.Linear(4 * 4 * self.filters_list[-1], self.som_input_size)
         self.device = device
-        self.som = SOM(input_dim = self.som_input_size, device = self.device)
+        self.som = SOM(input_dim=self.som_input_size, device=self.device)
         self.som = self.som.to(self.device)
 
     def cnn_extract_features(self, x):
@@ -42,9 +45,10 @@ class Net(nn.Module):
         predict_labels = []
         true_labels = []
 
-        for batch_idx, (inputs, targets) in enumerate(dataloader):
+        for batch_idx, (samples, targets) in enumerate(dataloader):
+            samples, targets = samples.to(self.device), targets.to(self.device)
+            outputs = self.cnn_extract_features(samples)
 
-            outputs = self.cnn_extract_features(inputs.to(self.device))
             _, bmu_indexes = self.som.get_winners(outputs.to(self.device))
             ind_max = bmu_indexes.item()
             clustering = clustering.append({'sample_ind': batch_idx,
