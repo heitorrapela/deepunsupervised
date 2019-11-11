@@ -13,7 +13,7 @@ from os.path import join
 
 class Datasets(data.Dataset):
 
-    def __init__(self, dataset, root_folder="raw-datasets/", flatten=False):
+    def __init__(self, dataset, root_folder="raw-datasets/", flatten=False, debug=False, n_samples=100):
         super(Datasets, self).__init__()
 
         transform_list = [transforms.ToTensor()]
@@ -28,12 +28,17 @@ class Datasets(data.Dataset):
 
             self.train_data = datasets.MNIST(root=root_folder, train=True, download=True, transform=transform)
             self.test_data = datasets.MNIST(root=root_folder, train=False, download=True, transform=transform)
-
-            self.train_data.data = self.train_data.data[:100]
-            self.test_data.data = self.test_data.data[:100]
+            
+            if(debug):
+                self.train_data.data = self.train_data.data[:n_samples]
+                self.test_data.data = self.test_data.data[:n_samples]
             self.dim_flatten = self.train_data.data.size(1) * self.train_data.data.size(2)
 
+            self.d_in = 1
+            self.hw_in = 28
+
         elif dataset == "fashion":
+            transform_list.append(transforms.Normalize((0.5,), (0.5,)))
 
             if flatten:
                 transform_list.append(ReshapeTransform((-1,)))
@@ -42,7 +47,14 @@ class Datasets(data.Dataset):
 
             self.train_data = datasets.FashionMNIST(root=root_folder, train=True, download=True, transform=transform)
             self.test_data = datasets.FashionMNIST(root=root_folder, train=False, download=True, transform=transform)
+            if(debug):
+                self.train_data.data = self.train_data.data[:n_samples]
+                self.test_data.data = self.test_data.data[:n_samples]
+
             self.dim_flatten = self.train_data.data.size(1) * self.train_data.data.size(2)
+
+            self.d_in = 1
+            self.hw_in = 28
 
         elif dataset == "cifar10":
 
@@ -53,8 +65,15 @@ class Datasets(data.Dataset):
 
             self.train_data = datasets.CIFAR10(root=root_folder, train=True, download=True, transform=transform)
             self.test_data = datasets.CIFAR10(root=root_folder, train=False, download=True, transform=transform)
+            
+            if(debug):
+                self.train_data.data = self.train_data.data[:n_samples]
+                self.test_data.data = self.test_data.data[:n_samples]
+            
             data_shape = self.train_data.data.shape
             self.dim_flatten = data_shape[1] * data_shape[2] * data_shape[3]
+            self.d_in = 3
+            self.hw_in = 32
 
         elif dataset == "cifar100":
 
@@ -65,8 +84,15 @@ class Datasets(data.Dataset):
 
             self.train_data = datasets.CIFAR100(root=root_folder, train=True, download=True, transform=transform)
             self.test_data = datasets.CIFAR100(root=root_folder, train=False, download=True, transform=transform)
+
+            if(debug):
+                self.train_data.data = self.train_data.data[:n_samples]
+                self.test_data.data = self.test_data.data[:n_samples]
+            
             data_shape = self.train_data.data.shape
             self.dim_flatten = data_shape[1] * data_shape[2] * data_shape[3]
+            self.d_in = 3
+            self.hw_in = 32
 
         elif dataset == "svhn":
 
@@ -77,14 +103,20 @@ class Datasets(data.Dataset):
 
             self.train_data = datasets.SVHN(root=root_folder, split='train', download=True, transform=transform)
             self.test_data = datasets.SVHN(root=root_folder, split='test', download=True, transform=transform)
+
+            if(debug):
+                self.train_data.data = self.train_data.data[:n_samples]
+                self.test_data.data = self.test_data.data[:n_samples]
+
             data_shape = self.train_data.data.shape
             self.dim_flatten = data_shape[1] * data_shape[2] * data_shape[3]
+            self.d_in = 3
+            self.hw_in = 32
 
         else:
             self.train_data = CustomDataset(load_path=join(root_folder, dataset), norm="minmax")
             self.test_data = self.train_data
             self.dim_flatten = self.train_data.data.shape[1]
-
 
 class CustomDataset(data.Dataset):
 

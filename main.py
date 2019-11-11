@@ -88,7 +88,7 @@ def weightedMSELoss(output, target, relevance):
     return torch.sum(relevance * (output - target) ** 2)
 
 
-def train_full_model(root, tensorboard_root, dataset_path, device, use_cuda, out_folder, epochs):
+def train_full_model(root, tensorboard_root, dataset_path, device, use_cuda, out_folder, epochs, debug, n_samples):
     if not os.path.exists(tensorboard_root):
         os.makedirs(tensorboard_root)
 
@@ -96,11 +96,10 @@ def train_full_model(root, tensorboard_root, dataset_path, device, use_cuda, out
     writer = SummaryWriter(tensorboard_folder)
     print("tensorboard --logdir=" + tensorboard_folder)
 
-    dataset = Datasets(dataset=dataset_path, root_folder=root)
+    dataset = Datasets(dataset=dataset_path, root_folder=root, debug=debug, n_samples=n_samples)
     train_loader = DataLoader(dataset.train_data, batch_size=batch_size, shuffle=True)
     test_loader = DataLoader(dataset.test_data, shuffle=False)
-
-    model = Net(device=device)
+    model = Net(device=device, d_in=dataset.d_in, hw_in=dataset.hw_in)
 
     manual_seed = 1
     random.seed(manual_seed)
@@ -169,26 +168,25 @@ def train_full_model(root, tensorboard_root, dataset_path, device, use_cuda, out
         t = None
 
         ## Calculate metrics or plot without change SOM map
-        for batch_idx, (inputs, targets) in enumerate(train_loader):
-            inputs, targets = inputs.to(device), targets.to(device)
-            outputs = model.cnn_extract_features(inputs)
+        if(debug):
+            for batch_idx, (inputs, targets) in enumerate(train_loader):
+                inputs, targets = inputs.to(device), targets.to(device)
+                outputs = model.cnn_extract_features(inputs)
+            
+                if samples is None:
+                    samples = outputs.cpu().detach().numpy()
+                    t = targets.cpu().detach().numpy()
+                else:
+                    samples = np.append(samples, outputs.cpu().detach().numpy(), axis=0)
+                    t = np.append(t, targets.cpu().detach().numpy(), axis=0)
+            
+            centers, relevances, ma = model.som.get_prototypes()
+            plot_data(samples, t, centers.cpu(), relevances.cpu()*0.1)
+            writer.add_scalar('Nodes', len(centers), epoch)
 
-            if samples is None:
-                samples = outputs.cpu().detach().numpy()
-                t = targets.cpu().detach().numpy()
-            else:
-                samples = np.append(samples, outputs.cpu().detach().numpy(), axis=0)
-                t = np.append(t, targets.cpu().detach().numpy(), axis=0)
-
-        centers, relevances, ma = model.som.get_prototypes()
-        plot_data(samples, t, centers.cpu(), relevances.cpu()*0.1)
         print("Epoch: %d avg_loss: %.6f\n" % (epoch, avg_loss/s))
-        
         writer.add_scalar('Loss/train', avg_loss/s, epoch)
-        writer.add_scalar('Nodes', len(centers), epoch)
-
-    plot_hold()
-
+    
     ## Need to change train loader to test loader...
     model.eval()
 
@@ -208,6 +206,8 @@ def train_full_model(root, tensorboard_root, dataset_path, device, use_cuda, out
 
     print('{0} \tCE: {1:.3f}'.format(dataset_path,
                                      metrics.cluster.predict_to_clustering_error(true_labels, predict_labels)))
+
+    plot_hold()
 
 
 def argument_parser():
@@ -231,6 +231,8 @@ def argument_parser():
     parser.add_argument('--params-file', default=None, help='Parameters')
 
     parser.add_argument('--som-only', default=False, help='Som-Only Mode')
+    parser.add_argument('--debug', action='store_true', help='Enables debug mode')
+    parser.add_argument('--n-samples', type=int, default=100, help='Dataset Number of Samples')
 
     return parser.parse_args()
 
@@ -260,6 +262,8 @@ if __name__ == '__main__':
     dataset_path = args.dataset
     batch_size = args.batch_size
     epochs = args.epochs
+    debug = args.debug
+    n_samples = args.n_samples
 
     input_paths = utils.read_lines(args.input_paths) if args.input_paths is not None else None
     parameters = utils.read_lines(args.params_file) if args.params_file is not None else None
@@ -275,4 +279,4 @@ if __name__ == '__main__':
                           workers=args.workers, out_folder=out_folder, n_max=n_max, evaluate=args.eval)
 
     else:
-        train_full_model(root, tensorboard_root, dataset_path, device, use_cuda, out_folder, epochs)
+        train_full_model(root, tensorboard_root, dataset_path, device, use_cuda, out_folder, epochs, debug, n_samples)
