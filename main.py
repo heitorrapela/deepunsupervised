@@ -218,7 +218,7 @@ def argument_parser():
     parser.add_argument('--nmax', type=int, default=None, help='number of nodes')
     parser.add_argument('--params-file', default=None, help='Parameters')
 
-    parser.add_argument('--som-only', default=True, help='Som-Only Mode')
+    parser.add_argument('--som-only', default=False, help='Som-Only Mode')
 
     return parser.parse_args()
 
