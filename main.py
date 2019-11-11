@@ -16,7 +16,8 @@ import torch.nn as nn
 from utils import utils
 from utils.plot import *
 import numpy as np
-
+from torch.utils.tensorboard import SummaryWriter
+from datetime import datetime
 
 def train_som(root, dataset_path, parameters, device, use_cuda, workers, out_folder,
               n_max=None, evaluate=False):
@@ -87,7 +88,14 @@ def weightedMSELoss(output, target, relevance):
     return torch.sum(relevance * (output - target) ** 2)
 
 
-def train_full_model(root, dataset_path, device, use_cuda, out_folder, epochs):
+def train_full_model(root, tensorboard_root, dataset_path, device, use_cuda, out_folder, epochs):
+    if not os.path.exists(tensorboard_root):
+        os.makedirs(tensorboard_root)
+
+    tensorboard_folder =  join(tensorboard_root, datetime.now().strftime('%Y-%m-%d-%H:%M:%S'))
+    writer = SummaryWriter(tensorboard_folder)
+    print("tensorboard --logdir=" + tensorboard_folder)
+
     dataset = Datasets(dataset=dataset_path, root_folder=root)
     train_loader = DataLoader(dataset.train_data, batch_size=batch_size, shuffle=True)
     test_loader = DataLoader(dataset.test_data, shuffle=False)
@@ -175,6 +183,9 @@ def train_full_model(root, dataset_path, device, use_cuda, out_folder, epochs):
         centers, relevances, ma = model.som.get_prototypes()
         plot_data(samples, t, centers.cpu(), relevances.cpu()*0.1)
         print("Epoch: %d avg_loss: %.6f\n" % (epoch, avg_loss/s))
+        
+        writer.add_scalar('Loss/train', avg_loss/s, epoch)
+        writer.add_scalar('Nodes', len(centers), epoch)
 
     plot_hold()
 
@@ -209,6 +220,7 @@ def argument_parser():
     parser.add_argument('--eval-interval', type=int, default=32, help='Evaluation Interval')
 
     parser.add_argument('--root', type=str, default='raw-datasets/', help='Dataset Root folder')
+    parser.add_argument('--root-tensorboard', type=str, default='tensorboard/', help='Tensorboard Root folder')
     parser.add_argument('--dataset', type=str, default='mnist', help='Dataset Name')
     parser.add_argument('--out-folder', type=str, default='results/', help='Folder to output results')
     parser.add_argument('--batch-size', type=int, default=2, help='input batch size')
@@ -244,6 +256,7 @@ if __name__ == '__main__':
     ngpu = int(args.ngpu)
 
     root = args.root
+    tensorboard_root = args.root_tensorboard
     dataset_path = args.dataset
     batch_size = args.batch_size
     epochs = args.epochs
@@ -262,4 +275,4 @@ if __name__ == '__main__':
                           workers=args.workers, out_folder=out_folder, n_max=n_max, evaluate=args.eval)
 
     else:
-        train_full_model(root, dataset_path, device, use_cuda, out_folder, epochs)
+        train_full_model(root, tensorboard_root, dataset_path, device, use_cuda, out_folder, epochs)
