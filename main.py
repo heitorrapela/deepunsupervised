@@ -19,6 +19,8 @@ from torch.utils.tensorboard import SummaryWriter
 from datetime import datetime
 from os.path import join
 from sampling.custom_lhs import *
+import cudf
+from cuml.manifold import TSNE as cumlTSNE
 
 
 def train_som(root, dataset_path, parameters, device, use_cuda, workers, out_folder,
@@ -182,6 +184,18 @@ def train_full_model(root, tensorboard_root, dataset_path, parameters, device, u
                 #                                                                        out))
                 avg_loss += out
                 s += len(sample)
+            for center in centers:
+                t = np.append(t, [10], axis=0)
+            samples = np.append(samples, centers.cpu().detach().numpy(), axis=0)
+            tsne = cumlTSNE(n_components = 2, method = 'barnes_hut')
+            embedding = tsne.fit_transform(samples)
+            plot_data_test(embedding, t, None,None)
+
+        print("Epoch: %d avg_loss: %.6f\n" % (epoch, avg_loss/s))
+        writer.add_scalar('Loss/train', avg_loss/s, epoch)
+    
+    #  Need to change train loader to test loader...
+    model.eval()
 
             samples = None
             t = None

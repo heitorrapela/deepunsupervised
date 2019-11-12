@@ -20,6 +20,7 @@ Deep Unsupervised Learning
 
     conda create -n deepunsupervised python=3.6 -y
     source activate deepunsupervised (or conda activate deepunsupervised)
+    conda install -c nvidia -c rapidsai -c conda-forge -c pytorch -c defaults cuml -y
     conda install pytorch torchvision cudatoolkit=10.0 -c pytorch -y
     conda install tensorboard -y
     conda install pandas -y
