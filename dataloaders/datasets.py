@@ -29,9 +29,10 @@ class Datasets(data.Dataset):
             self.train_data = datasets.MNIST(root=root_folder, train=True, download=True, transform=transform)
             self.test_data = datasets.MNIST(root=root_folder, train=False, download=True, transform=transform)
             
-            if(debug):
+            if debug:
                 self.train_data.data = self.train_data.data[:n_samples]
                 self.test_data.data = self.test_data.data[:n_samples]
+
             self.dim_flatten = self.train_data.data.size(1) * self.train_data.data.size(2)
 
             self.d_in = 1
@@ -47,7 +48,8 @@ class Datasets(data.Dataset):
 
             self.train_data = datasets.FashionMNIST(root=root_folder, train=True, download=True, transform=transform)
             self.test_data = datasets.FashionMNIST(root=root_folder, train=False, download=True, transform=transform)
-            if(debug):
+
+            if debug:
                 self.train_data.data = self.train_data.data[:n_samples]
                 self.test_data.data = self.test_data.data[:n_samples]
 
@@ -66,7 +68,7 @@ class Datasets(data.Dataset):
             self.train_data = datasets.CIFAR10(root=root_folder, train=True, download=True, transform=transform)
             self.test_data = datasets.CIFAR10(root=root_folder, train=False, download=True, transform=transform)
             
-            if(debug):
+            if debug:
                 self.train_data.data = self.train_data.data[:n_samples]
                 self.test_data.data = self.test_data.data[:n_samples]
             
@@ -85,7 +87,7 @@ class Datasets(data.Dataset):
             self.train_data = datasets.CIFAR100(root=root_folder, train=True, download=True, transform=transform)
             self.test_data = datasets.CIFAR100(root=root_folder, train=False, download=True, transform=transform)
 
-            if(debug):
+            if debug:
                 self.train_data.data = self.train_data.data[:n_samples]
                 self.test_data.data = self.test_data.data[:n_samples]
             
@@ -104,7 +106,7 @@ class Datasets(data.Dataset):
             self.train_data = datasets.SVHN(root=root_folder, split='train', download=True, transform=transform)
             self.test_data = datasets.SVHN(root=root_folder, split='test', download=True, transform=transform)
 
-            if(debug):
+            if debug:
                 self.train_data.data = self.train_data.data[:n_samples]
                 self.test_data.data = self.test_data.data[:n_samples]
 
@@ -117,6 +119,7 @@ class Datasets(data.Dataset):
             self.train_data = CustomDataset(load_path=join(root_folder, dataset), norm="minmax")
             self.test_data = self.train_data
             self.dim_flatten = self.train_data.data.shape[1]
+
 
 class CustomDataset(data.Dataset):
 

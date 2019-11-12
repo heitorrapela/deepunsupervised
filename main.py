@@ -19,6 +19,7 @@ import numpy as np
 from torch.utils.tensorboard import SummaryWriter
 from datetime import datetime
 
+
 def train_som(root, dataset_path, parameters, device, use_cuda, workers, out_folder,
               n_max=None, evaluate=False):
 
@@ -111,7 +112,7 @@ def train_full_model(root, tensorboard_root, dataset_path, device, use_cuda, out
         cudnn.benchmark = True
 
     lr = 0.00001
-    #optimizer = optim.SGD(model.parameters(), lr=lr, momentum=0.5)
+    #  optimizer = optim.SGD(model.parameters(), lr=lr, momentum=0.5)
     optimizer = optim.Adam(model.parameters(), lr=lr)
     loss = nn.MSELoss(reduction='sum')
 
@@ -122,7 +123,6 @@ def train_full_model(root, tensorboard_root, dataset_path, device, use_cuda, out
         for batch_idx, (sample, target) in enumerate(train_loader):
             sample, target = sample.to(device), target.to(device)
             model(sample)
-
 
         cluster_result, predict_labels, true_labels = model.cluster(test_loader)
         print("Homogeneity: %0.3f" % metrics.cluster.homogeneity_score(true_labels, predict_labels))
@@ -143,7 +143,8 @@ def train_full_model(root, tensorboard_root, dataset_path, device, use_cuda, out
 
             samples_high_at, weights_unique_nodes_high_at, relevances = model(sample)
 
-            if len(samples_high_at) > 0:  #  if only new nodes were created, the loss is zero, no need to backprobagate it
+            #  if only new nodes were created, the loss is zero, no need to backprobagate it
+            if len(samples_high_at) > 0:
                 weights_unique_nodes_high_at = weights_unique_nodes_high_at.view(-1, model.som_input_size)
 
                 # out = loss(samples_high_at, weights_unique_nodes_high_at)
@@ -159,7 +160,7 @@ def train_full_model(root, tensorboard_root, dataset_path, device, use_cuda, out
             #     print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss SOM: {:.6f}'.format(epoch,
             #                                                                        batch_idx * len(sample),
             #                                                                        len(train_loader.dataset),
-            #                                                                        100. * batch_idx / len(train_loader),
+            #                                                                        100. * batch_idx/len(train_loader),
             #                                                                        out))
             avg_loss += out
             s += len(sample)
@@ -167,8 +168,8 @@ def train_full_model(root, tensorboard_root, dataset_path, device, use_cuda, out
         samples = None
         t = None
 
-        ## Calculate metrics or plot without change SOM map
-        if(debug):
+        #  Calculate metrics or plot without change SOM map
+        if debug:
             for batch_idx, (inputs, targets) in enumerate(train_loader):
                 inputs, targets = inputs.to(device), targets.to(device)
                 outputs = model.cnn_extract_features(inputs)
@@ -187,7 +188,7 @@ def train_full_model(root, tensorboard_root, dataset_path, device, use_cuda, out
         print("Epoch: %d avg_loss: %.6f\n" % (epoch, avg_loss/s))
         writer.add_scalar('Loss/train', avg_loss/s, epoch)
     
-    ## Need to change train loader to test loader...
+    #  Need to change train loader to test loader...
     model.eval()
 
     print("Train Finished", flush=True)

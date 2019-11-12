@@ -21,7 +21,10 @@ def get_data_targets(path, file, target_idx=None):
         targets = data['class'] if target_idx is None else data[target_idx]
     else:
         data = pd.read_csv(join(path, file), header=None)
-        targets = data.iloc[:, -1].values.astype('int16') if target_idx is None else data.ix[:, target_idx].values.astype('int16')
+        if target_idx is None:
+            targets = data.iloc[:, -1].values.astype('int16')
+        else:
+            targets = data.ix[:, target_idx].values.astype('int16')
 
     return targets
 

@@ -101,7 +101,8 @@ class SOM(nn.Module):
         minimum = torch.min(self.moving_avg[index], dim=1, keepdim=True)[0]
         avg = torch.mean(self.moving_avg[index], dim=1, keepdim=True)
 
-        # print("index:", index, "\nw: ", w, "\nweights: ", self.weights[index], "\ndist: ", distance, "\nmoving avg:", self.moving_avg[index], "\nmaximum:", maximum, "\nminimum:", minimum, "\navg:", avg)
+        #  print("index:", index, "\nw: ", w, "\nweights: ", self.weights[index], "\ndist: ", distance,
+        #  "\nmoving avg:", self.moving_avg[index], "\nmaximum:", maximum, "\nminimum:", minimum, "\navg:", avg)
         one_tensor = torch.tensor(1, dtype=torch.float, device=self.device)
 
         self.relevance[index] = torch.div(one_tensor,
@@ -120,7 +121,8 @@ class SOM(nn.Module):
         return torch.max(activations, dim=1)
 
     def get_prototypes(self):
-        return self.weights[self.node_control != 0], self.relevance[self.node_control != 0], self.moving_avg[self.node_control != 0]
+        mask = self.node_control != 0
+        return self.weights[mask], self.relevance[mask], self.moving_avg[mask]
 
     def forward(self, input, lr=0.01):
         '''
@@ -152,8 +154,8 @@ class SOM(nn.Module):
             with torch.no_grad():
                 self.update_node(updatable_samples_hight_at, unique_nodes_high_at)
 
-            #print(unique_nodes_high_at)
-            #exit(0)
+            # print(unique_nodes_high_at)
+            # exit(0)
 
         bool_low_at = act_max < self.at
         samples_low_at = input[bool_low_at]

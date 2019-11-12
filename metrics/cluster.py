@@ -6,16 +6,20 @@ from scipy.io import arff
 from sklearn.metrics import confusion_matrix as sk_confusion
 import sklearn
 
+
 def homogeneity_score(true_labels, predict_labels):
     return sklearn.metrics.cluster.homogeneity_score(true_labels, predict_labels)
+
 
 def completeness_score(true_labels, predict_labels):
     return sklearn.metrics.cluster.completeness_score(true_labels, predict_labels)
 
+
 def v_measure_score(true_labels, predict_labels):
     return sklearn.metrics.cluster.v_measure_score(true_labels, predict_labels)
 
-def clustering_error(confusion_matrix):
+
+def clustering_error(confusion):
 
     """
     Calculates the CE (clustering error) of a clustering 
@@ -25,9 +29,9 @@ def clustering_error(confusion_matrix):
     to exactly one class label.
     """
 
-    confusion_matrix = maximize_trace(confusion_matrix)
+    confusion = maximize_trace(confusion)
 
-    ce = 1 - np.trace(confusion_matrix) / np.sum(confusion_matrix)
+    ce = 1 - np.trace(confusion) / np.sum(confusion)
     return ce
 
 
@@ -266,11 +270,11 @@ def multilabelresults_to_clustering_error(data_file, results_file, qty_categorie
 
                     confusion_matrix[k, j] += 1
 
-    #confusion_matrix = confusion_matrix.T
-    #print(confusion_matrix.shape)
+    # confusion_matrix = confusion_matrix.T
+    # print(confusion_matrix.shape)
     outconf = np.copy(confusion_matrix)
     confusion_matrix = maximize_trace(confusion_matrix)
-    #print(outconf.shape)
+    # print(outconf.shape)
 
     # finding union size of all data points
     count = 0
