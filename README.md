@@ -27,5 +27,8 @@ Deep Unsupervised Learning
     conda install scipy -y
     conda install scikit-learn -y
     conda install -c omnia munkres -y
+    conda install tensorboard -y
     conda install matplotlib -y
     conda install -c conda-forge pydoe2 -y
+    conda install seaborn -y
+    

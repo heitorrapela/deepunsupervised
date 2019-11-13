@@ -21,7 +21,8 @@ from os.path import join
 from sampling.custom_lhs import *
 import cudf
 from cuml.manifold import TSNE as cumlTSNE
-
+import seaborn as sns
+import matplotlib.pyplot as plt
 
 def train_som(root, dataset_path, parameters, device, use_cuda, workers, out_folder,
               n_max=None, evaluate=False):
