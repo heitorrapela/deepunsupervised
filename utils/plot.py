@@ -1,6 +1,7 @@
 import seaborn as sns
 import matplotlib.pyplot as plt
-    
+import numpy as np    
+
 fig = ax = None
 scat_samples = scat_centers = None
 colors = None
@@ -22,7 +23,7 @@ def plot_data(data, target, centers=None, relevances=None):
         ax.set_ylabel('dim1', fontsize=15)
         ax.grid(True)
         
-        colors = target*360/(target.max()+1)
+        colors = (2*np.pi)*target/(target.max()*2)
         scat_samples = ax.scatter(data[:, 0], data[:, 1], c=colors, cmap='hsv', alpha=0.5)
         
         labels_samples = []
@@ -41,8 +42,8 @@ def plot_data(data, target, centers=None, relevances=None):
         plt.show()
 
     else:
-        colors = target*360/(target.max()+1)
-
+        
+        colors = (2*np.pi)*target/(target.max()*2)
         scat_samples.remove()
         scat_samples = ax.scatter(data[:, 0], data[:, 1], c=colors, cmap='hsv', alpha=0.5)
 
@@ -74,7 +75,7 @@ def plot_data_test(data, target, centers=None, relevances=None):
         ax1.set_ylabel('dim1', fontsize=15)
         ax1.grid(True)
 
-        colors1 = target*360/(target.max()+1)
+        colors1 = (2*np.pi)*target/(target.max()+2)
         scat_samples1 = ax1.scatter(data[:, 0], data[:, 1], c=colors1, cmap='hsv', alpha=0.5)
         
         labels_samples1 = []
@@ -93,10 +94,10 @@ def plot_data_test(data, target, centers=None, relevances=None):
         plt.show()
 
     else:
-        colors = target*360/(target.max()+1)
 
+        colors1 = (2*np.pi)*target/(target.max()+2)
         scat_samples1.remove()
-        scat_samples1 = ax1.scatter(data[:, 0], data[:, 1], c=colors, cmap='hsv', alpha=0.5)
+        scat_samples1 = ax1.scatter(data[:, 0], data[:, 1], c=colors1, cmap='hsv', alpha=0.5)
 
         for i, label in enumerate(target):
             labels_samples1[i].remove()
