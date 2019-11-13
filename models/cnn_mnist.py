@@ -7,8 +7,8 @@ from models.som import SOM
 
 
 class Net(nn.Module):
-    def __init__(self, d_in=1, hw_in=28, device='cpu', som_input=2, filters_list=[20, 50],
-                 kernel_size_list=[5, 5], stride_size_list=[1, 1], padding_size_list=[0, 0], max_pool2d_size=2):
+    def __init__(self, d_in=1, hw_in=28, som_input=2, filters_list=[20, 50], kernel_size_list=[5, 5],
+                 stride_size_list=[1, 1], padding_size_list=[0, 0], max_pool2d_size=2, device='cpu'):
         super(Net, self).__init__(),
 
         self.som_input_size = som_input
