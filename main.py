@@ -17,6 +17,7 @@ from utils import utils
 from utils.plot import *
 from torch.utils.tensorboard import SummaryWriter
 from datetime import datetime
+from os.path import join
 from sampling.custom_lhs import *
 
 
@@ -249,14 +250,14 @@ def run_lhs_full_model(filename, lhs_samples=1):
                        max_pool=None,
                        max_pool2d_size=None,
                        filters_pow=None,
-                       kernel_size=None)# ,
-                       # n_max=[10, 200],
-                       # at=[0.70, 0.999],
-                       # eb=[0.0001, 0.01],
-                       # ds_beta=[0.001, 0.5],
-                       # eps_ds=[0.01, 0.1],
-                       # epochs=[70, 200],
-                       # seed=[1, 200000])
+                       kernel_size=None,
+                       n_max=[10, 200],
+                       at=[0.70, 0.999],
+                       eb=[0.0001, 0.01],
+                       ds_beta=[0.001, 0.5],
+                       eps_ds=[0.01, 0.1],
+                       epochs=[70, 200],
+                       seed=[1, 200000])
 
     sampling = lhs(lhs_samples)
     lhs.write_params_file(filename)

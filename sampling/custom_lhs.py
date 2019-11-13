@@ -2,7 +2,6 @@
 
 import numpy as np
 import pandas as pd
-from os.path import join
 from sampling.lhs import LHS
 
 
@@ -51,9 +50,9 @@ class SOMLHS:
 		self.curr_sampling = self.lhs(samples)
 		self.curr_sampling = pd.DataFrame(self.curr_sampling, columns=self.params_names).astype('float32')
 
-		self.curr_sampling['n_max'] = self.curr_sampling['n_max'].round().astype('int')
-		self.curr_sampling['epochs'] = self.curr_sampling['epochs'].round().astype('int')
-		self.curr_sampling['seed'] = self.curr_sampling['seed'].round().astype('int')
+		self.curr_sampling['n_max'] = self.curr_sampling['n_max'].round().astype('int32')
+		self.curr_sampling['epochs'] = self.curr_sampling['epochs'].round().astype('int32')
+		self.curr_sampling['seed'] = self.curr_sampling['seed'].round().astype('int32')
 
 		return self.curr_sampling
 
