@@ -213,7 +213,7 @@ class SOM(nn.Module):
         for i, relevance in enumerate(self.relevance):
             if self.node_control[i] == 1:
                 with torch.no_grad():
-                    content += str(i) + "\t" + "\t".join(map(str, relevance.detach().numpy())) + "\n"
+                    content += str(i) + "\t" + "\t".join(map(str, relevance.cpu().numpy())) + "\n"
 
         result_text = cluster_result.to_string(header=False, index=False).strip()
         result_text = re.sub('\n +', '\n', result_text)
