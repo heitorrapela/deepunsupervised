@@ -1,4 +1,5 @@
 # Author: Pedro Braga <phmb4@cin.ufpe.br>.
+
 import os
 
 from models.som import SOM
