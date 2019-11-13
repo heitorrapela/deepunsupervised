@@ -5,6 +5,15 @@ from os.path import join
 import numpy as np
 
 
+def read_params(file_path):
+    if os.path.isfile(file_path):
+        data = pd.read_csv(file_path)
+    else:
+        data = []
+
+    return data
+
+
 def read_lines(file_path):
     if os.path.isfile(file_path):
         data = open(file_path, 'r')

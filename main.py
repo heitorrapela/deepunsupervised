@@ -7,7 +7,6 @@ from dataloaders.datasets import Datasets
 import torch.backends.cudnn as cudnn
 import random
 from torch.utils.data.dataloader import DataLoader
-from os.path import join
 import argparse
 import metrics
 from models.cnn_mnist import Net
@@ -16,9 +15,9 @@ import torch
 import torch.nn as nn
 from utils import utils
 from utils.plot import *
-import numpy as np
 from torch.utils.tensorboard import SummaryWriter
 from datetime import datetime
+from sampling.custom_lhs import *
 
 
 def train_som(root, dataset_path, parameters, device, use_cuda, workers, out_folder,
@@ -26,64 +25,61 @@ def train_som(root, dataset_path, parameters, device, use_cuda, workers, out_fol
 
     dataset = Datasets(dataset=dataset_path, root_folder=root, flatten=True)
 
-    parameters_count = 7
-
-    for params in range(0, len(parameters), parameters_count):
-
-        n_max_som = int(parameters[params]) if n_max is None else n_max
+    for index, param_set in parameters.iterrows():
+        n_max_som = int(param_set['n_max']) if n_max is None else n_max
 
         som = SOM(input_dim=dataset.dim_flatten,
                   n_max=n_max_som,
-                  at=float(parameters[params + 1]),
-                  dsbeta=float(parameters[params + 2]),
-                  lr=float(parameters[params + 3]),
-                  eps_ds=float(parameters[params + 4]),
+                  at=float(param_set['at']),
+                  ds_beta=float(param_set['ds_beta']),
+                  eb=float(param_set['eb']),
+                  eps_ds=float(param_set['eps_ds']),
                   device=device)
 
-        epochs = int(parameters[params + 5])
+        epochs = int(param_set['epochs'])
 
-        manual_seed = int(parameters[params + 6])
+        manual_seed = int(param_set['seed'])
         random.seed(manual_seed)
         torch.manual_seed(manual_seed)
-
-        train_loader = DataLoader(dataset.train_data, batch_size=batch_size, shuffle=True, num_workers=workers)
-        test_loader = DataLoader(dataset.test_data, shuffle=False)
 
         if use_cuda:
             torch.cuda.manual_seed_all(manual_seed)
             som.cuda()
             cudnn.benchmark = True
 
+        train_loader = DataLoader(dataset.train_data, batch_size=batch_size, shuffle=True, num_workers=workers)
+        test_loader = DataLoader(dataset.test_data, shuffle=False)
+
         for epoch in range(epochs):
+            print('{} [epoch: {}]'.format(dataset_path, epoch))
+
             for batch_idx, (sample, target) in enumerate(train_loader):
                 sample, target = sample.to(device), target.to(device)
 
                 som(sample)
                 # if batch_idx % args.log_interval == 0:
                 #     print('{0} id {1} [epoch: {2}]'.format(dataset_path,
-                #                                            int(params / parameters_count),
+                #                                            index,
                 #                                            epoch))
 
                 # if evaluate and batch_idx % args.eval_interval == 0:
                 #     _, predict_labels, true_labels = som.cluster(test_loader)
                 #     print('{0} id {1} [Epoch: {2} {3:.0f}%]\tCE: {4:.6f}'.format(dataset_path,
-                #                                                                  int(params / parameters_count),
+                #                                                                  index,
                 #                                                                  epoch,
                 #                                                                  100. * batch_idx / len(train_loader),
                 #                                                                  metrics.calculate_ce(true_labels,
                 #                                                                               predict_labels)))
 
         cluster_result, predict_labels, true_labels = som.cluster(test_loader)
-        filename = dataset_path.split(".arff")[0] + "_" + str(int(params / parameters_count)) + ".results"
+        filename = dataset_path.split(".arff")[0] + "_" + str(index) + ".results"
         som.write_output(join(out_folder, filename), cluster_result)
 
         if evaluate:
-            print('{0} id {1}\tCE: {4:.6f}'.format(dataset_path,
-                                                   int(params / parameters_count),
-                                                   epoch,
-                                                   100. * batch_idx / len(train_loader),
-                                                   metrics.cluster.predict_to_clustering_error(true_labels,
-                                                                                               predict_labels)))
+            print('{} \t exp_id {} \tCE: {:.3f}'.format(dataset_path,
+                                                        index,
+                                                        metrics.cluster.predict_to_clustering_error(true_labels,
+                                                                                                    predict_labels)))
 
 
 def weightedMSELoss(output, target, relevance):
@@ -94,13 +90,11 @@ def train_full_model(root, tensorboard_root, dataset_path, device, use_cuda, out
     if not os.path.exists(tensorboard_root):
         os.makedirs(tensorboard_root)
 
-    tensorboard_folder =  join(tensorboard_root, datetime.now().strftime('%Y-%m-%d-%H:%M:%S'))
+    tensorboard_folder = join(tensorboard_root, datetime.now().strftime('%Y-%m-%d-%H:%M:%S'))
     writer = SummaryWriter(tensorboard_folder)
     print("tensorboard --logdir=" + tensorboard_folder)
 
     dataset = Datasets(dataset=dataset_path, root_folder=root, debug=debug, n_samples=n_samples)
-    train_loader = DataLoader(dataset.train_data, batch_size=batch_size, shuffle=True)
-    test_loader = DataLoader(dataset.test_data, shuffle=False)
     model = Net(device=device, d_in=dataset.d_in, hw_in=dataset.hw_in)
 
     manual_seed = 1
@@ -111,6 +105,9 @@ def train_full_model(root, tensorboard_root, dataset_path, device, use_cuda, out
         torch.cuda.manual_seed_all(manual_seed)
         model.cuda()
         cudnn.benchmark = True
+
+    train_loader = DataLoader(dataset.train_data, batch_size=batch_size, shuffle=True)
+    test_loader = DataLoader(dataset.test_data, shuffle=False)
 
     lr = 0.00001
     #  optimizer = optim.SGD(model.parameters(), lr=lr, momentum=0.5)
@@ -212,6 +209,36 @@ def train_full_model(root, tensorboard_root, dataset_path, device, use_cuda, out
     plot_hold()
 
 
+def run_lhs_som(filename, n_samples=1):
+    lhs = SOMLHS(n_max=[10, 200],
+                 at=[0.70, 0.999],
+                 eb=[0.0001, 0.01],
+                 ds_beta=[0.001, 0.5],
+                 eps_ds=[0.01, 0.1],
+                 epochs=[70, 200],
+                 seed=[1, 200000])
+
+    sampling = lhs(n_samples)
+    lhs.write_params_file(filename)
+
+    return sampling
+
+
+def run_lhs_full_model(filename, n_samples=1):
+    lhs = SOMLHS(n_max=[10, 200],
+                 at=[0.70, 0.999],
+                 eb=[0.0001, 0.01],
+                 ds_beta=[0.001, 0.5],
+                 eps_ds=[0.01, 0.1],
+                 epochs=[70, 200],
+                 seed=[1, 200000])
+
+    sampling = lhs(n_samples)
+    lhs.write_params_file(filename)
+
+    return sampling
+
+
 def argument_parser():
     parser = argparse.ArgumentParser(description='Self Organizing Map')
     parser.add_argument('--cuda', action='store_true', help='enables cuda')
@@ -230,9 +257,12 @@ def argument_parser():
     parser.add_argument('--epochs', type=int, default=80, help='input total epoch')
     parser.add_argument('--input-paths', default=None, help='Input Paths')
     parser.add_argument('--nmax', type=int, default=None, help='number of nodes')
+
+    parser.add_argument('--lhs', action='store_true', help='enables lhs sampling before run')
+    parser.add_argument('--lhs-samples', type=int, default=250, help='Number of Sets to be Sampled using LHS')
     parser.add_argument('--params-file', default=None, help='Parameters')
 
-    parser.add_argument('--som-only', default=False, help='Som-Only Mode')
+    parser.add_argument('--som-only', action='store_true', help='Som-Only Mode')
     parser.add_argument('--debug', action='store_true', help='Enables debug mode')
     parser.add_argument('--n-samples', type=int, default=100, help='Dataset Number of Samples')
 
@@ -268,10 +298,16 @@ if __name__ == '__main__':
     n_samples = args.n_samples
 
     input_paths = utils.read_lines(args.input_paths) if args.input_paths is not None else None
-    parameters = utils.read_lines(args.params_file) if args.params_file is not None else None
     n_max = args.nmax
 
     if args.som_only:
+
+        if args.lhs:
+            run_lhs_som(args.params_file, args.lhs_samples)
+
+        params_file_som = args.params_file if args.params_file is not None else "arguments/default_som.lhs"
+        parameters = utils.read_params(params_file_som)
+
         if input_paths is None:
             train_som(root=root, dataset_path=dataset_path, parameters=parameters, device=device, use_cuda=use_cuda,
                       workers=args.workers, out_folder=out_folder, n_max=n_max, evaluate=args.eval)
@@ -281,4 +317,10 @@ if __name__ == '__main__':
                           workers=args.workers, out_folder=out_folder, n_max=n_max, evaluate=args.eval)
 
     else:
+        if args.lhs:
+            run_lhs_full_model(args.params_file, args.lhs_samples)
+
+        params_file_full = args.params_file if args.params_file is not None else "arguments/default_full_model.lhs"
+        parameters = utils.read_params(params_file_full)
+
         train_full_model(root, tensorboard_root, dataset_path, device, use_cuda, out_folder, epochs, debug, n_samples)

@@ -8,13 +8,13 @@ import re
 
 class SOM(nn.Module):
 
-    def __init__(self, input_dim, n_max=20, lr=0.1, at=0.985, dsbeta=0.5, eps_ds=1., device='cpu'):
+    def __init__(self, input_dim, n_max=20, eb=0.1, at=0.985, ds_beta=0.5, eps_ds=1., device='cpu'):
         '''
         :param input_dim:
         :param n_max:
         :param at:
-        :param dsbeta:
-        :param lr:
+        :param ds_beta:
+        :param eb:
         :param eps_ds:
         :param use_cuda:
         '''
@@ -22,10 +22,10 @@ class SOM(nn.Module):
         super(SOM, self).__init__()
         self.input_size = input_dim
         self.n_max = n_max
-        self.lr = lr
+        self.lr = eb
         self.at = at
 
-        self.dsbeta = dsbeta
+        self.ds_beta = ds_beta
         self.eps_ds = eps_ds
         self.device = torch.device(device)
 
@@ -94,8 +94,8 @@ class SOM(nn.Module):
 
     def update_node(self, w, index):
         distance = torch.abs(torch.sub(w, self.weights[index]))
-        self.moving_avg[index] = torch.mul(self.lr * self.dsbeta, distance) + torch.mul(1 - (self.lr * self.dsbeta),
-                                                                                        self.moving_avg[index])
+        self.moving_avg[index] = torch.mul(self.lr * self.ds_beta, distance) + torch.mul(1 - (self.lr * self.ds_beta),
+                                                                                         self.moving_avg[index])
 
         maximum = torch.max(self.moving_avg[index], dim=1, keepdim=True)[0]
         minimum = torch.min(self.moving_avg[index], dim=1, keepdim=True)[0]
