@@ -101,6 +101,9 @@ def train_full_model(root, tensorboard_root, dataset_path, parameters, device, u
 
     dataset = Datasets(dataset=dataset_path, root_folder=root, debug=debug, n_samples=n_samples)
 
+    som_plotter = Plotter()
+    tsne_plotter = Plotter()
+
     for param_set in parameters.itertuples():
 
         model = Net(d_in=dataset.d_in,
@@ -185,19 +188,8 @@ def train_full_model(root, tensorboard_root, dataset_path, parameters, device, u
                 #                                                                        out))
                 avg_loss += out
                 s += len(sample)
-            for center in centers:
-                t = np.append(t, [10], axis=0)
-            samples = np.append(samples, centers.cpu().detach().numpy(), axis=0)
-            tsne = cumlTSNE(n_components = 2, method = 'barnes_hut')
-            embedding = tsne.fit_transform(samples)
-            plot_data_test(embedding, t, None,None)
 
-        print("Epoch: %d avg_loss: %.6f\n" % (epoch, avg_loss/s))
-        writer.add_scalar('Loss/train', avg_loss/s, epoch)
     
-    #  Need to change train loader to test loader...
-    model.eval()
-
             samples = None
             t = None
 
@@ -215,8 +207,17 @@ def train_full_model(root, tensorboard_root, dataset_path, parameters, device, u
                         t = np.append(t, targets.cpu().detach().numpy(), axis=0)
 
                 centers, relevances, ma = model.som.get_prototypes()
-                plot_data(samples, t, centers.cpu(), relevances.cpu()*0.1)
+                som_plotter.plot_data(samples, t, centers.cpu(), relevances.cpu()*0.1)
                 writer.add_scalar('Nodes', len(centers), epoch)
+
+
+                for center in centers:
+                    t = np.append(t, [10], axis=0)
+                samples = np.append(samples, centers.cpu().detach().numpy(), axis=0)
+                tsne = cumlTSNE(n_components = 2, method = 'barnes_hut')
+                embedding = tsne.fit_transform(samples)
+                tsne_plotter.plot_data(embedding, t, None,None)
+
 
             print("Epoch: %d avg_loss: %.6f\n" % (epoch, avg_loss/s))
             writer.add_scalar('Loss/train', avg_loss/s, epoch)
@@ -242,7 +243,8 @@ def train_full_model(root, tensorboard_root, dataset_path, parameters, device, u
                                          metrics.cluster.predict_to_clustering_error(true_labels, predict_labels)))
 
         if(debug):
-            plot_hold()
+            som_plotter.plot_hold()
+            tsne_plotter.plot_hold()
 
 
 def run_lhs_som(filename, lhs_samples=1):
