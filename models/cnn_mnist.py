@@ -23,20 +23,7 @@ class Net(nn.Module):
         self.padding_size_list = padding_size_list
         self.stride_size_list = stride_size_list
         self.convs = []
-
-        print("-------------")
-        print(self.som_input_size)
-        print(self.d_in)
-        print(self.hw_out)
-        print(self.max_pool)
-        print(self.n_conv_layers)
-        print(self.filters_list)
-        print(self.max_pool2d_size)
-        print(self.kernel_size_list)
-        print(self.padding_size_list)
-        print(self.stride_size_list)
-        print("----------")
-
+        
         last_hw_out = self.hw_out 
         for i in range(self.n_conv_layers):
             if(not (i < len(self.padding_size_list) and i < len(self.kernel_size_list) and i < len(self.stride_size_list))):
