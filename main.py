@@ -99,21 +99,26 @@ def train_full_model(root, tensorboard_root, dataset_path, parameters, device, u
     dataset = Datasets(dataset=dataset_path, root_folder=root, debug=debug, n_samples=n_samples)
 
     for param_set in parameters.itertuples():
-        '''
-        Fica faltando:
-            param_set.n_conv
-            param_set.max_pool -> considerar lógica da amostragem 0 e 1 para boolean
-            param_set.filters_pow -> considerar lógica do pow para cada uma das n_conv
-            param_set.kernel_size -> considerar geração da lista em funçao do número de n_conv
-            
-        '''
+        filters_pow_range = [2, 6]
+        power_list = []
+        first = 0
+        while(len(power_list) < param_set.n_conv):
+            if(first == 0):
+                power_list = power_list + list(range(param_set.filters_pow, filters_pow_range[-1], 1))
+            else:
+                power_list = power_list + list(range(filters_pow_range[0], filters_pow_range[-1], 1))
+            power_list = power_list + list(range(filters_pow_range[-1], filters_pow_range[0], -1))
+            first = 1
+
         model = Net(d_in=dataset.d_in,
+                    n_conv_layers=param_set.n_conv,
+                    max_pool=True if param_set.max_pool else False,
                     hw_in=dataset.hw_in,
                     som_input=param_set.som_in,
-                    filters_list=[20, 50],  # lógica com o param_set['filters_pow']
-                    kernel_size_list=[5, 5],  # gerar a lista com param_set['kernel_size']
-                    stride_size_list=[1, 1],  # decidimos deixar fixo, certo?
-                    padding_size_list=[0, 0],  # também decidimos deixar fixo, certo?
+                    filters_list=power_list,
+                    kernel_size_list=param_set.n_conv*[param_set.kernel_size],
+                    stride_size_list=param_set.n_conv*[1],
+                    padding_size_list=param_set.n_conv*[0],
                     max_pool2d_size=param_set.max_pool2d_size,
                     device=device)
 

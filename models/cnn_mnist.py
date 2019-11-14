@@ -3,6 +3,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import pandas as pd
+import numpy as np
 from models.som import SOM
 
 
@@ -16,12 +17,25 @@ class Net(nn.Module):
         self.hw_out = hw_in
         self.max_pool = max_pool
         self.n_conv_layers = n_conv_layers
-        self.filters_list = [d_in] + filters_list
+        self.filters_list = [d_in] + list(np.power(2,filters_list))
         self.max_pool2d_size = max_pool2d_size
         self.kernel_size_list = kernel_size_list
         self.padding_size_list = padding_size_list
         self.stride_size_list = stride_size_list
         self.convs = []
+
+        print("-------------")
+        print(self.som_input_size)
+        print(self.d_in)
+        print(self.hw_out)
+        print(self.max_pool)
+        print(self.n_conv_layers)
+        print(self.filters_list)
+        print(self.max_pool2d_size)
+        print(self.kernel_size_list)
+        print(self.padding_size_list)
+        print(self.stride_size_list)
+        print("----------")
 
         last_hw_out = self.hw_out 
         for i in range(n_conv_layers):
@@ -44,7 +58,7 @@ class Net(nn.Module):
             else:
                 print("Warning the size of the output is too small!")
                 break
-            # print(self.hw_out)
+            print(self.hw_out)
         
         self.fc1 = nn.Linear(self.hw_out*self.hw_out*self.filters_list[len(self.filters_list) - len(self.convs) - 2], self.som_input_size)
         self.device = device
