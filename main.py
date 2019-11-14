@@ -88,7 +88,7 @@ def weightedMSELoss(output, target, relevance):
 
 
 def train_full_model(root, tensorboard_root, dataset_path, parameters, device, use_cuda, out_folder,
-                     epochs, debug, n_samples):
+                     epochs, debug, n_samples, lr_cnn):
     if not os.path.exists(tensorboard_root):
         os.makedirs(tensorboard_root)
 
@@ -99,30 +99,25 @@ def train_full_model(root, tensorboard_root, dataset_path, parameters, device, u
     dataset = Datasets(dataset=dataset_path, root_folder=root, debug=debug, n_samples=n_samples)
 
     for param_set in parameters.itertuples():
-        filters_pow_range = [2, 6]
-        power_list = []
-        first = 0
-        while(len(power_list) < param_set.n_conv):
-            if(first == 0):
-                power_list = power_list + list(range(param_set.filters_pow, filters_pow_range[-1], 1))
-            else:
-                power_list = power_list + list(range(filters_pow_range[0], filters_pow_range[-1], 1))
-            power_list = power_list + list(range(filters_pow_range[-1], filters_pow_range[0], -1))
-            first = 1
 
         model = Net(d_in=dataset.d_in,
                     n_conv_layers=param_set.n_conv,
                     max_pool=True if param_set.max_pool else False,
                     hw_in=dataset.hw_in,
                     som_input=param_set.som_in,
-                    filters_list=power_list,
+                    filters_list=param_set.filters_pow,
                     kernel_size_list=param_set.n_conv*[param_set.kernel_size],
                     stride_size_list=param_set.n_conv*[1],
                     padding_size_list=param_set.n_conv*[0],
                     max_pool2d_size=param_set.max_pool2d_size,
+                    n_max=param_set.n_max,
+                    at=param_set.at,
+                    eb=param_set.eb,
+                    ds_beta=param_set.ds_beta,
+                    eps_ds=param_set.eps_ds,
                     device=device)
 
-        manual_seed = 1
+        manual_seed = param_set.seed
         random.seed(manual_seed)
         torch.manual_seed(manual_seed)
 
@@ -134,25 +129,25 @@ def train_full_model(root, tensorboard_root, dataset_path, parameters, device, u
         train_loader = DataLoader(dataset.train_data, batch_size=batch_size, shuffle=True)
         test_loader = DataLoader(dataset.test_data, shuffle=False)
 
-        lr = 0.00001
-        #  optimizer = optim.SGD(model.parameters(), lr=lr, momentum=0.5)
-        optimizer = optim.Adam(model.parameters(), lr=lr)
+        #  optimizer = optim.SGD(model.parameters(), lr=lr_cnn, momentum=0.5)
+        optimizer = optim.Adam(model.parameters(), lr=lr_cnn)
         loss = nn.MSELoss(reduction='sum')
 
         model.train()
-        for epoch in range(epochs):
+        for epoch in range(param_set.epochs):
 
             # Self-Organize
             for batch_idx, (sample, target) in enumerate(train_loader):
                 sample, target = sample.to(device), target.to(device)
                 model(sample)
 
-            cluster_result, predict_labels, true_labels = model.cluster(test_loader)
-            print("Homogeneity: %0.3f" % metrics.cluster.homogeneity_score(true_labels, predict_labels))
-            print("Completeness: %0.3f" % metrics.cluster.completeness_score(true_labels, predict_labels))
-            print("V-measure: %0.3f" % metrics.cluster.v_measure_score(true_labels, predict_labels))
-            print('{0} \tCE: {1:.3f}'.format(dataset_path,
-                                             metrics.cluster.predict_to_clustering_error(true_labels, predict_labels)))
+            if(debug):
+                cluster_result, predict_labels, true_labels = model.cluster(test_loader)
+                print("Homogeneity: %0.3f" % metrics.cluster.homogeneity_score(true_labels, predict_labels))
+                print("Completeness: %0.3f" % metrics.cluster.completeness_score(true_labels, predict_labels))
+                print("V-measure: %0.3f" % metrics.cluster.v_measure_score(true_labels, predict_labels))
+                print('{0} \tCE: {1:.3f}'.format(dataset_path,
+                                                 metrics.cluster.predict_to_clustering_error(true_labels, predict_labels)))
 
             # Self-Organize and Backpropagate
             avg_loss = 0
@@ -231,7 +226,8 @@ def train_full_model(root, tensorboard_root, dataset_path, parameters, device, u
         print('{0} \tCE: {1:.3f}'.format(dataset_path,
                                          metrics.cluster.predict_to_clustering_error(true_labels, predict_labels)))
 
-        plot_hold()
+        if(debug):
+            plot_hold()
 
 
 def run_lhs_som(filename, lhs_samples=1):
@@ -296,6 +292,7 @@ def argument_parser():
     parser.add_argument('--som-only', action='store_true', help='Som-Only Mode')
     parser.add_argument('--debug', action='store_true', help='Enables debug mode')
     parser.add_argument('--n-samples', type=int, default=100, help='Dataset Number of Samples')
+    parser.add_argument('--lr-cnn', type=float, default=0.00001, help='Learning Rate of CNN Model')
 
     return parser.parse_args()
 
@@ -327,6 +324,7 @@ if __name__ == '__main__':
     epochs = args.epochs
     debug = args.debug
     n_samples = args.n_samples
+    lr_cnn = args.lr_cnn
 
     input_paths = utils.read_lines(args.input_paths) if args.input_paths is not None else None
     n_max = args.nmax
@@ -357,4 +355,5 @@ if __name__ == '__main__':
 
         train_full_model(root=root, tensorboard_root=tensorboard_root,
                          dataset_path=dataset_path, parameters=parameters, device=device,
-                         use_cuda=use_cuda, out_folder=out_folder, epochs=epochs, debug=debug, n_samples=n_samples)
+                         use_cuda=use_cuda, out_folder=out_folder, epochs=epochs, debug=debug, n_samples=n_samples,
+                         lr_cnn=lr_cnn)
