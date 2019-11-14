@@ -38,7 +38,7 @@ class Net(nn.Module):
         print("----------")
 
         last_hw_out = self.hw_out 
-        for i in range(n_conv_layers):
+        for i in range(self.n_conv_layers):
             if(not (i < len(self.padding_size_list) and i < len(self.kernel_size_list) and i < len(self.stride_size_list))):
                 print("Warning the size of the padding, kernel or stride list is too small!")
                 break
@@ -58,9 +58,8 @@ class Net(nn.Module):
             else:
                 print("Warning the size of the output is too small!")
                 break
-            print(self.hw_out)
         
-        self.fc1 = nn.Linear(self.hw_out*self.hw_out*self.filters_list[len(self.filters_list) - len(self.convs) - 2], self.som_input_size)
+        self.fc1 = nn.Linear(self.hw_out*self.hw_out*self.filters_list[len(self.convs)], self.som_input_size)
         self.device = device
         self.som = SOM(input_dim=self.som_input_size, device=self.device)
         self.som = self.som.to(self.device)
@@ -68,7 +67,7 @@ class Net(nn.Module):
     def cnn_extract_features(self, x):
         for i in range(len(self.convs)):
             x = self.convs[i](x)
-        x = x.view(-1, self.hw_out*self.hw_out*self.filters_list[len(self.filters_list) - len(self.convs) - 2])
+        x = x.view(-1, self.hw_out*self.hw_out*self.filters_list[len(self.convs)])
         x = self.fc1(x)
         x = torch.tanh(x)
         return x
