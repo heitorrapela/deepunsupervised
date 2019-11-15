@@ -19,7 +19,10 @@ from torch.utils.tensorboard import SummaryWriter
 from datetime import datetime
 from os.path import join
 from sampling.custom_lhs import *
-
+import cudf
+from cuml.manifold import TSNE as cumlTSNE
+import seaborn as sns
+import matplotlib.pyplot as plt
 
 def train_som(root, dataset_path, parameters, device, use_cuda, workers, out_folder,
               n_max=None, evaluate=False):
@@ -88,7 +91,7 @@ def weightedMSELoss(output, target, relevance):
 
 
 def train_full_model(root, tensorboard_root, dataset_path, parameters, device, use_cuda, out_folder,
-                     epochs, debug, n_samples):
+                     epochs, debug, n_samples, lr_cnn):
     if not os.path.exists(tensorboard_root):
         os.makedirs(tensorboard_root)
 
@@ -98,26 +101,29 @@ def train_full_model(root, tensorboard_root, dataset_path, parameters, device, u
 
     dataset = Datasets(dataset=dataset_path, root_folder=root, debug=debug, n_samples=n_samples)
 
+    som_plotter = Plotter()
+    tsne_plotter = Plotter()
+
     for param_set in parameters.itertuples():
-        '''
-        Fica faltando:
-            param_set.n_conv
-            param_set.max_pool -> considerar lógica da amostragem 0 e 1 para boolean
-            param_set.filters_pow -> considerar lógica do pow para cada uma das n_conv
-            param_set.kernel_size -> considerar geração da lista em funçao do número de n_conv
-            
-        '''
+
         model = Net(d_in=dataset.d_in,
+                    n_conv_layers=param_set.n_conv,
+                    max_pool=True if param_set.max_pool else False,
                     hw_in=dataset.hw_in,
                     som_input=param_set.som_in,
-                    filters_list=[20, 50],  # lógica com o param_set['filters_pow']
-                    kernel_size_list=[5, 5],  # gerar a lista com param_set['kernel_size']
-                    stride_size_list=[1, 1],  # decidimos deixar fixo, certo?
-                    padding_size_list=[0, 0],  # também decidimos deixar fixo, certo?
+                    filters_list=param_set.filters_pow,
+                    kernel_size_list=param_set.n_conv*[param_set.kernel_size],
+                    stride_size_list=param_set.n_conv*[1],
+                    padding_size_list=param_set.n_conv*[0],
                     max_pool2d_size=param_set.max_pool2d_size,
+                    n_max=param_set.n_max,
+                    at=param_set.at,
+                    eb=param_set.eb,
+                    ds_beta=param_set.ds_beta,
+                    eps_ds=param_set.eps_ds,
                     device=device)
 
-        manual_seed = 1
+        manual_seed = param_set.seed
         random.seed(manual_seed)
         torch.manual_seed(manual_seed)
 
@@ -129,25 +135,25 @@ def train_full_model(root, tensorboard_root, dataset_path, parameters, device, u
         train_loader = DataLoader(dataset.train_data, batch_size=batch_size, shuffle=True)
         test_loader = DataLoader(dataset.test_data, shuffle=False)
 
-        lr = 0.00001
-        #  optimizer = optim.SGD(model.parameters(), lr=lr, momentum=0.5)
-        optimizer = optim.Adam(model.parameters(), lr=lr)
+        #  optimizer = optim.SGD(model.parameters(), lr=lr_cnn, momentum=0.5)
+        optimizer = optim.Adam(model.parameters(), lr=lr_cnn)
         loss = nn.MSELoss(reduction='sum')
 
         model.train()
-        for epoch in range(epochs):
+        for epoch in range(param_set.epochs):
 
             # Self-Organize
             for batch_idx, (sample, target) in enumerate(train_loader):
                 sample, target = sample.to(device), target.to(device)
                 model(sample)
 
-            cluster_result, predict_labels, true_labels = model.cluster(test_loader)
-            print("Homogeneity: %0.3f" % metrics.cluster.homogeneity_score(true_labels, predict_labels))
-            print("Completeness: %0.3f" % metrics.cluster.completeness_score(true_labels, predict_labels))
-            print("V-measure: %0.3f" % metrics.cluster.v_measure_score(true_labels, predict_labels))
-            print('{0} \tCE: {1:.3f}'.format(dataset_path,
-                                             metrics.cluster.predict_to_clustering_error(true_labels, predict_labels)))
+            if(debug):
+                cluster_result, predict_labels, true_labels = model.cluster(test_loader)
+                print("Homogeneity: %0.3f" % metrics.cluster.homogeneity_score(true_labels, predict_labels))
+                print("Completeness: %0.3f" % metrics.cluster.completeness_score(true_labels, predict_labels))
+                print("V-measure: %0.3f" % metrics.cluster.v_measure_score(true_labels, predict_labels))
+                print('{0} \tCE: {1:.3f}'.format(dataset_path,
+                                                 metrics.cluster.predict_to_clustering_error(true_labels, predict_labels)))
 
             # Self-Organize and Backpropagate
             avg_loss = 0
@@ -183,6 +189,7 @@ def train_full_model(root, tensorboard_root, dataset_path, parameters, device, u
                 avg_loss += out
                 s += len(sample)
 
+    
             samples = None
             t = None
 
@@ -200,8 +207,17 @@ def train_full_model(root, tensorboard_root, dataset_path, parameters, device, u
                         t = np.append(t, targets.cpu().detach().numpy(), axis=0)
 
                 centers, relevances, ma = model.som.get_prototypes()
-                plot_data(samples, t, centers.cpu(), relevances.cpu()*0.1)
+                som_plotter.plot_data(samples, t, centers.cpu(), relevances.cpu()*0.1)
                 writer.add_scalar('Nodes', len(centers), epoch)
+
+
+                for center in centers:
+                    t = np.append(t, [10], axis=0)
+                samples = np.append(samples, centers.cpu().detach().numpy(), axis=0)
+                tsne = cumlTSNE(n_components = 2, method = 'barnes_hut')
+                embedding = tsne.fit_transform(samples)
+                tsne_plotter.plot_data(embedding, t, None,None)
+
 
             print("Epoch: %d avg_loss: %.6f\n" % (epoch, avg_loss/s))
             writer.add_scalar('Loss/train', avg_loss/s, epoch)
@@ -226,7 +242,9 @@ def train_full_model(root, tensorboard_root, dataset_path, parameters, device, u
         print('{0} \tCE: {1:.3f}'.format(dataset_path,
                                          metrics.cluster.predict_to_clustering_error(true_labels, predict_labels)))
 
-        plot_hold()
+        if(debug):
+            som_plotter.plot_hold()
+            tsne_plotter.plot_hold()
 
 
 def run_lhs_som(filename, lhs_samples=1):
@@ -291,6 +309,7 @@ def argument_parser():
     parser.add_argument('--som-only', action='store_true', help='Som-Only Mode')
     parser.add_argument('--debug', action='store_true', help='Enables debug mode')
     parser.add_argument('--n-samples', type=int, default=100, help='Dataset Number of Samples')
+    parser.add_argument('--lr-cnn', type=float, default=0.00001, help='Learning Rate of CNN Model')
 
     return parser.parse_args()
 
@@ -322,6 +341,7 @@ if __name__ == '__main__':
     epochs = args.epochs
     debug = args.debug
     n_samples = args.n_samples
+    lr_cnn = args.lr_cnn
 
     input_paths = utils.read_lines(args.input_paths) if args.input_paths is not None else None
     n_max = args.nmax
@@ -352,4 +372,5 @@ if __name__ == '__main__':
 
         train_full_model(root=root, tensorboard_root=tensorboard_root,
                          dataset_path=dataset_path, parameters=parameters, device=device,
-                         use_cuda=use_cuda, out_folder=out_folder, epochs=epochs, debug=debug, n_samples=n_samples)
+                         use_cuda=use_cuda, out_folder=out_folder, epochs=epochs, debug=debug, n_samples=n_samples,
+                         lr_cnn=lr_cnn)
