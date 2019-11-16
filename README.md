@@ -31,4 +31,5 @@ Deep Unsupervised Learning
     conda install matplotlib -y
     conda install -c conda-forge pydoe2 -y
     conda install seaborn -y
+    conda install jupyter -y
     
