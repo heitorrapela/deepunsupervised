@@ -21,9 +21,8 @@ from os.path import join
 from sampling.custom_lhs import *
 
 
-def train_som(root, dataset_path, parameters, device, use_cuda, workers, out_folder,
-              n_max=None, evaluate=False):
-
+def train_som(root, dataset_path, parameters, device, use_cuda, workers,
+              out_folder, n_max=None, evaluate=False, summ_writer=None):
     dataset = Datasets(dataset=dataset_path, root_folder=root, flatten=True)
 
     for param_set in parameters.itertuples():
@@ -36,7 +35,6 @@ def train_som(root, dataset_path, parameters, device, use_cuda, workers, out_fol
                   eb=param_set.eb,
                   eps_ds=param_set.eps_ds,
                   device=device)
-
         som_epochs = param_set.epochs
 
         manual_seed = param_set.seed
@@ -59,9 +57,7 @@ def train_som(root, dataset_path, parameters, device, use_cuda, workers, out_fol
 
                 som(sample)
                 # if batch_idx % args.log_interval == 0:
-                #     print('{0} id {1} [epoch: {2}]'.format(dataset_path,
-                #                                            param_set.Index,
-                #                                            epoch))
+                #     print('{0} id {1} [epoch: {2}]'.format(dataset_path, param_set.Index, epoch))
 
                 # if evaluate and batch_idx % args.eval_interval == 0:
                 #     _, predict_labels, true_labels = som.cluster(test_loader)
@@ -77,25 +73,19 @@ def train_som(root, dataset_path, parameters, device, use_cuda, workers, out_fol
         som.write_output(join(out_folder, filename), cluster_result)
 
         if evaluate:
-            print('{} \t exp_id {} \tCE: {:.3f}'.format(dataset_path,
-                                                        param_set.Index,
-                                                        metrics.cluster.predict_to_clustering_error(true_labels,
-                                                                                                    predict_labels)))
+            ce = metrics.cluster.predict_to_clustering_error(true_labels, predict_labels)
+            print('{} \t exp_id {} \tCE: {:.3f}'.format(dataset_path, param_set.Index, ce))
+
+            # summ_writer.add_hparams(hparam_dict=dict(param_set._asdict()),
+            #                         metric_dict={'CE_' + dataset_path.split(".arff")[0]: ce})
 
 
 def weightedMSELoss(output, target, relevance):
     return torch.sum(relevance * (output - target) ** 2)
 
 
-def train_full_model(root, tensorboard_root, dataset_path, parameters, device, use_cuda, out_folder,
-                     epochs, debug, n_samples):
-    if not os.path.exists(tensorboard_root):
-        os.makedirs(tensorboard_root)
-
-    tensorboard_folder = join(tensorboard_root, datetime.now().strftime('%Y-%m-%d-%H:%M:%S'))
-    writer = SummaryWriter(tensorboard_folder)
-    print("tensorboard --logdir=" + tensorboard_folder)
-
+def train_full_model(root, dataset_path, parameters, device, use_cuda, out_folder,
+                     epochs, debug, n_samples, summ_writer):
     dataset = Datasets(dataset=dataset_path, root_folder=root, debug=debug, n_samples=n_samples)
 
     for param_set in parameters.itertuples():
@@ -201,10 +191,10 @@ def train_full_model(root, tensorboard_root, dataset_path, parameters, device, u
 
                 centers, relevances, ma = model.som.get_prototypes()
                 plot_data(samples, t, centers.cpu(), relevances.cpu()*0.1)
-                writer.add_scalar('Nodes', len(centers), epoch)
+                summ_writer.add_scalar('Nodes', len(centers), epoch)
 
             print("Epoch: %d avg_loss: %.6f\n" % (epoch, avg_loss/s))
-            writer.add_scalar('Loss/train', avg_loss/s, epoch)
+            summ_writer.add_scalar('Loss/train', avg_loss/s, epoch)
 
         #  Need to change train loader to test loader...
         model.eval()
@@ -230,12 +220,12 @@ def train_full_model(root, tensorboard_root, dataset_path, parameters, device, u
 
 
 def run_lhs_som(filename, lhs_samples=1):
-    lhs = SOMLHS(n_max=[10, 200],
+    lhs = SOMLHS(n_max=[5, 10],
                  at=[0.70, 0.999],
                  eb=[0.0001, 0.01],
                  ds_beta=[0.001, 0.5],
                  eps_ds=[0.01, 0.1],
-                 epochs=[70, 200],
+                 epochs=[1, 3],
                  seed=[1, 200000])
 
     sampling = lhs(lhs_samples)
@@ -275,7 +265,7 @@ def argument_parser():
     parser.add_argument('--eval-interval', type=int, default=32, help='Evaluation Interval')
 
     parser.add_argument('--root', type=str, default='raw-datasets/', help='Dataset Root folder')
-    parser.add_argument('--root-tensorboard', type=str, default='tensorboard/', help='Tensorboard Root folder')
+    parser.add_argument('--tensorboard-root', type=str, default='tensorboard/', help='Tensorboard Root folder')
     parser.add_argument('--dataset', type=str, default='mnist', help='Dataset Name')
     parser.add_argument('--out-folder', type=str, default='results/', help='Folder to output results')
     parser.add_argument('--batch-size', type=int, default=2, help='input batch size')
@@ -306,6 +296,14 @@ if __name__ == '__main__':
     if not os.path.exists(os.path.dirname(out_folder)):
         os.makedirs(os.path.dirname(out_folder), exist_ok=True)
 
+    tensorboard_root = args.tensorboard_root
+    if not os.path.exists(os.path.dirname(tensorboard_root)):
+        os.makedirs(os.path.dirname(tensorboard_root), exist_ok=True)
+
+    tensorboard_folder = join(tensorboard_root, datetime.now().strftime('%Y-%m-%d-%H:%M:%S'))
+    writer = SummaryWriter(tensorboard_folder)
+    print("tensorboard --logdir=" + tensorboard_folder)
+
     use_cuda = torch.cuda.is_available() and args.cuda
 
     if use_cuda:
@@ -316,7 +314,6 @@ if __name__ == '__main__':
     ngpu = int(args.ngpu)
 
     root = args.root
-    tensorboard_root = args.root_tensorboard
     dataset_path = args.dataset
     batch_size = args.batch_size
     epochs = args.epochs
@@ -335,12 +332,14 @@ if __name__ == '__main__':
             parameters = utils.read_params(params_file_som)
 
         if input_paths is None:
-            train_som(root=root, dataset_path=dataset_path, parameters=parameters, device=device, use_cuda=use_cuda,
-                      workers=args.workers, out_folder=out_folder, n_max=n_max, evaluate=args.eval)
+            train_som(root=root, dataset_path=dataset_path, parameters=parameters, device=device,
+                      use_cuda=use_cuda, workers=args.workers, out_folder=out_folder, n_max=n_max,
+                      evaluate=args.eval, summ_writer=writer)
         else:
             for i, train_path in enumerate(input_paths):
-                train_som(root=root, dataset_path=train_path, parameters=parameters, device=device, use_cuda=use_cuda,
-                          workers=args.workers, out_folder=out_folder, n_max=n_max, evaluate=args.eval)
+                train_som(root=root, dataset_path=train_path, parameters=parameters, device=device,
+                          use_cuda=use_cuda, workers=args.workers, out_folder=out_folder, n_max=n_max,
+                          evaluate=args.eval, summ_writer=writer)
 
     else:
         params_file_full = args.params_file if args.params_file is not None else "arguments/default_full_model.lhs"
@@ -350,6 +349,6 @@ if __name__ == '__main__':
         else:
             parameters = utils.read_params(params_file_full)
 
-        train_full_model(root=root, tensorboard_root=tensorboard_root,
-                         dataset_path=dataset_path, parameters=parameters, device=device,
-                         use_cuda=use_cuda, out_folder=out_folder, epochs=epochs, debug=debug, n_samples=n_samples)
+        train_full_model(root=root, dataset_path=dataset_path, parameters=parameters,
+                         device=device, use_cuda=use_cuda, out_folder=out_folder, epochs=epochs,
+                         debug=debug, n_samples=n_samples, summ_writer=writer)
