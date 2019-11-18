@@ -152,8 +152,18 @@ def train_full_model(root, tensorboard_root, dataset_path, parameters, device, u
                 print("Homogeneity: %0.3f" % metrics.cluster.homogeneity_score(true_labels, predict_labels))
                 print("Completeness: %0.3f" % metrics.cluster.completeness_score(true_labels, predict_labels))
                 print("V-measure: %0.3f" % metrics.cluster.v_measure_score(true_labels, predict_labels))
+                nmi = metrics.cluster.nmi(true_labels, predict_labels)
+                print("Normalized Mutual Information (NMI): %0.3f" % nmi)
+                ari = metrics.cluster.ari(true_labels, predict_labels)
+                print("Adjusted Rand Index (ARI): %0.3f" % ari)
+                clus_acc = metrics.cluster.acc(true_labels, predict_labels)
+                print("Clustering Accuracy (ACC): %0.3f" % clus_acc)
                 print('{0} \tCE: {1:.3f}'.format(dataset_path,
                                                  metrics.cluster.predict_to_clustering_error(true_labels, predict_labels)))
+
+                writer.add_scalar('/NMI', nmi, epoch)
+                writer.add_scalar('/ARI', ari, epoch)
+                writer.add_scalar('/Acc', clus_acc, epoch)
 
             # Self-Organize and Backpropagate
             avg_loss = 0
@@ -210,7 +220,6 @@ def train_full_model(root, tensorboard_root, dataset_path, parameters, device, u
                 som_plotter.plot_data(samples, t, centers.cpu(), relevances.cpu()*0.1)
                 writer.add_scalar('Nodes', len(centers), epoch)
 
-
                 for center in centers:
                     t = np.append(t, [10], axis=0)
                 samples = np.append(samples, centers.cpu().detach().numpy(), axis=0)
@@ -232,9 +241,16 @@ def train_full_model(root, tensorboard_root, dataset_path, parameters, device, u
         if not os.path.exists(join(args.out_folder, args.dataset.split(".arff")[0])):
             os.makedirs(join(args.out_folder, args.dataset.split(".arff")[0]))
 
+
         print("Homogeneity: %0.3f" % metrics.cluster.homogeneity_score(true_labels, predict_labels))
         print("Completeness: %0.3f" % metrics.cluster.completeness_score(true_labels, predict_labels))
         print("V-measure: %0.3f" % metrics.cluster.v_measure_score(true_labels, predict_labels))
+        print("Normalized Mutual Information (NMI): %0.3f" % 
+                            metrics.cluster.nmi(true_labels, predict_labels))
+        print("Adjusted Rand Index (ARI): %0.3f" % 
+                            metrics.cluster.ari(true_labels, predict_labels))
+        print("Clustering Accuracy (ACC): %0.3f" % 
+                            metrics.cluster.acc(true_labels, predict_labels))
 
         filename = dataset_path.split(".arff")[0] + ".results"
         model.write_output(join(out_folder, filename), cluster_result)

@@ -19,6 +19,32 @@ def v_measure_score(true_labels, predict_labels):
     return sklearn.metrics.cluster.v_measure_score(true_labels, predict_labels)
 
 
+## NMI - Normalized Mutual Info Score
+def nmi(true_labels, predict_labels):
+    return sklearn.metrics.normalized_mutual_info_score(true_labels, predict_labels, average_method='geometric')
+
+
+## ARI - Adjusted Rand Index
+def ari(true_labels, predict_labels):
+    return sklearn.metrics.adjusted_rand_score(true_labels, predict_labels)
+
+
+# Metric Clustering Accuracy from DCEC
+# https://github.com/michaal94/torch_DCEC
+# https://github.com/XifengGuo/DCEC/blob/master/metrics.py
+def acc(labels_true, labels_pred):
+    labels_true = np.asarray(labels_true).astype(np.int64)
+    labels_pred = np.asarray(labels_pred).astype(np.int64)
+    assert labels_pred.size == labels_true.size
+    D = max(labels_pred.max(), labels_true.max()) + 1
+    w = np.zeros((D, D), dtype=np.int64)
+    for i in range(labels_pred.size):
+        w[labels_pred[i], labels_true[i]] += 1
+    from sklearn.utils.linear_assignment_ import linear_assignment
+    ind = linear_assignment(w.max() - w)
+    return sum([w[i, j] for i, j in ind]) * 1.0 / labels_pred.size
+    
+
 def clustering_error(confusion):
 
     """
@@ -324,4 +350,3 @@ def confusion_matrix(y_true, y_pred):
             confusion[row, column] += 1
 
     return confusion
-
