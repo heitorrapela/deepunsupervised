@@ -115,6 +115,25 @@ class Datasets(data.Dataset):
             self.d_in = 3
             self.hw_in = 32
 
+        elif dataset == "usps":
+
+            if flatten:
+                transform_list.append(ReshapeTransform((-1,)))
+
+            transform = transforms.Compose(transform_list)
+
+            self.train_data = datasets.USPS(root=root_folder, train=True, download=True, transform=transform)
+            self.test_data = datasets.USPS(root=root_folder, train=False, download=True, transform=transform)
+
+            if debug:
+                self.train_data.data = self.train_data.data[:n_samples]
+                self.test_data.data = self.test_data.data[:n_samples]
+
+            data_shape = self.train_data.data.shape
+            self.dim_flatten = data_shape[1] * data_shape[2]
+            self.d_in = 1
+            self.hw_in = 16
+            
         else:
             self.train_data = CustomDataset(load_path=join(root_folder, dataset), norm="minmax")
             self.test_data = self.train_data
