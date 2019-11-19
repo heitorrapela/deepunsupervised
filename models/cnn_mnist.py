@@ -24,6 +24,7 @@ class Net(nn.Module):
         self.padding_size_list = padding_size_list
         self.stride_size_list = stride_size_list
         self.convs = []
+        self.device = device
         for i in range(self.n_conv_layers):
             if not (i < len(self.padding_size_list) and
                     i < len(self.kernel_size_list) and
@@ -42,13 +43,12 @@ class Net(nn.Module):
                                                 nn.BatchNorm2d(self.filters_list[i+1]) if self.batch_norm else nn.Identity(),
                                                 nn.ReLU(inplace=True),
                                                 nn.MaxPool2d(self.max_pool2d_size,
-                                                             self.max_pool2d_size) if self.max_pool else nn.Identity()))
+                                                             self.max_pool2d_size) if self.max_pool else nn.Identity()).to(self.device))
             else:
                 print("Warning the size of the output is too small!")
                 break
         
-        self.fc1 = nn.Linear(self.hw_out*self.hw_out*self.filters_list[len(self.convs)], self.som_input_size)
-        self.device = device
+        self.fc1 = nn.Linear(self.hw_out*self.hw_out*self.filters_list[len(self.convs)], self.som_input_size).to(self.device)
         self.som = SOM(input_dim=self.som_input_size, n_max=n_max, eb=eb, at=at, ds_beta=ds_beta, eps_ds=eps_ds, device=self.device)
         self.som = self.som.to(self.device)
 
