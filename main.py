@@ -206,6 +206,7 @@ def train_full_model(root, dataset_path, parameters, device, use_cuda, out_folde
                         t = np.append(t, targets.cpu().detach().numpy(), axis=0)
 
                 centers, relevances, ma = model.som.get_prototypes()
+
                 som_plotter.plot_data(samples, t, centers.cpu(), relevances.cpu()*0.1)
                 summ_writer.add_scalar('Nodes', len(centers), epoch)
 
@@ -215,7 +216,6 @@ def train_full_model(root, dataset_path, parameters, device, use_cuda, out_folde
                 tsne = cumlTSNE(n_components = 2, method = 'barnes_hut')
                 embedding = tsne.fit_transform(samples)
                 tsne_plotter.plot_data(embedding, t, None,None)
-
 
             print("Epoch: %d avg_loss: %.6f\n" % (epoch, avg_loss/s))
             summ_writer.add_scalar('Loss/train', avg_loss/s, epoch)
@@ -385,5 +385,5 @@ if __name__ == '__main__':
             parameters = utils.read_params(params_file_full)
 
         train_full_model(root=root, dataset_path=dataset_path, parameters=parameters,
-                         device=device, use_cuda=use_cuda, out_folder=out_folder,,
+                         device=device, use_cuda=use_cuda, out_folder=out_folder,
                          debug=debug, n_samples=n_samples, lr_cnn=lr_cnn, summ_writer=writer)
