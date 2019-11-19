@@ -135,7 +135,6 @@ def train_full_model(root, dataset_path, parameters, device, use_cuda,
 
         model.train()
         for epoch in range(param_set.epochs):
-
             # Self-Organize
             #for batch_idx, (sample, target) in enumerate(train_loader):
             #    sample, target = sample.to(device), target.to(device)
@@ -232,7 +231,6 @@ def train_full_model(root, dataset_path, parameters, device, use_cuda,
             print("Epoch: %d avg_loss: %.6f\n" % (epoch, avg_loss/s))
             summ_writer.add_scalar('Loss/train', avg_loss/s, epoch)
 
-
         #  Need to change train loader to test loader...
         model.eval()
 
@@ -250,7 +248,7 @@ def train_full_model(root, dataset_path, parameters, device, use_cuda,
         print("Adjusted Rand Index (ARI): %0.3f" % metrics.cluster.ari(true_labels, predict_labels))
         print("Clustering Accuracy (ACC): %0.3f" % metrics.cluster.acc(true_labels, predict_labels))
 
-        filename = dataset_path.split(".arff")[0] + ".results"
+        filename = dataset_path.split(".arff")[0] + "_" + str(param_set.Index) + ".results"
         model.write_output(join(out_folder, filename), cluster_result)
 
         print('{0} \tCE: {1:.3f}'.format(dataset_path,
