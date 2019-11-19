@@ -19,12 +19,12 @@ def v_measure_score(true_labels, predict_labels):
     return sklearn.metrics.cluster.v_measure_score(true_labels, predict_labels)
 
 
-## NMI - Normalized Mutual Info Score
+#  NMI - Normalized Mutual Info Score
 def nmi(true_labels, predict_labels):
     return sklearn.metrics.normalized_mutual_info_score(true_labels, predict_labels, average_method='geometric')
 
 
-## ARI - Adjusted Rand Index
+# ARI - Adjusted Rand Index
 def ari(true_labels, predict_labels):
     return sklearn.metrics.adjusted_rand_score(true_labels, predict_labels)
 

@@ -20,9 +20,9 @@ class Datasets(data.Dataset):
         transform_test_list = []
 
         if dataset == "mnist":
-
             transform_train_list.append(transforms.ToTensor())
             transform_train_list.append(transforms.Normalize((0.1307,), (0.3081,)))
+
             if flatten:
                 transform_train_list.append(ReshapeTransform((-1,)))
 
@@ -42,7 +42,6 @@ class Datasets(data.Dataset):
             self.hw_in = 28
 
         elif dataset == "fashion":
-
             transform_train_list.append(transforms.ToTensor())
             transform_train_list.append(transforms.Normalize((0.5,), (0.5,)))
 
@@ -52,8 +51,10 @@ class Datasets(data.Dataset):
             transform_train = transforms.Compose(transform_train_list)
             transform_test = transform_train
 
-            self.train_data = datasets.FashionMNIST(root=root_folder, train=True, download=True, transform=transform_train)
-            self.test_data = datasets.FashionMNIST(root=root_folder, train=False, download=True, transform=transform_test)
+            self.train_data = datasets.FashionMNIST(root=root_folder, train=True,
+                                                    download=True, transform=transform_train)
+            self.test_data = datasets.FashionMNIST(root=root_folder, train=False,
+                                                   download=True, transform=transform_test)
 
             if debug:
                 self.train_data.data = self.train_data.data[:n_samples]
@@ -112,7 +113,6 @@ class Datasets(data.Dataset):
 
             self.train_data = datasets.CIFAR100(root=root_folder, train=True, download=True, transform=transform_train)
             self.test_data = datasets.CIFAR100(root=root_folder, train=False, download=True, transform=transform_test)
-
 
             if debug:
                 self.train_data.data = self.train_data.data[:n_samples]

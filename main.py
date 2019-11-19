@@ -19,10 +19,8 @@ from torch.utils.tensorboard import SummaryWriter
 from datetime import datetime
 from os.path import join
 from sampling.custom_lhs import *
-import cudf
 from cuml.manifold import TSNE as cumlTSNE
-import seaborn as sns
-import matplotlib.pyplot as plt
+
 
 def train_som(root, dataset_path, parameters, device, use_cuda, workers,
               out_folder, n_max=None, evaluate=False, summ_writer=None):
@@ -87,7 +85,8 @@ def weightedMSELoss(output, target, relevance):
     return torch.sum(relevance * (output - target) ** 2)
 
 
-def train_full_model(root, dataset_path, parameters, device, use_cuda, out_folder, debug, n_samples, lr_cnn, summ_writer):
+def train_full_model(root, dataset_path, parameters, device, use_cuda,
+                     out_folder, debug, n_samples, lr_cnn, summ_writer):
     dataset = Datasets(dataset=dataset_path, root_folder=root, debug=debug, n_samples=n_samples)
 
     som_plotter = Plotter()
@@ -136,7 +135,7 @@ def train_full_model(root, dataset_path, parameters, device, use_cuda, out_folde
                 sample, target = sample.to(device), target.to(device)
                 model(sample)
 
-            if(debug):
+            if debug:
                 cluster_result, predict_labels, true_labels = model.cluster(test_loader)
                 print("Homogeneity: %0.3f" % metrics.cluster.homogeneity_score(true_labels, predict_labels))
                 print("Completeness: %0.3f" % metrics.cluster.completeness_score(true_labels, predict_labels))
@@ -148,11 +147,12 @@ def train_full_model(root, dataset_path, parameters, device, use_cuda, out_folde
                 clus_acc = metrics.cluster.acc(true_labels, predict_labels)
                 print("Clustering Accuracy (ACC): %0.3f" % clus_acc)
                 print('{0} \tCE: {1:.3f}'.format(dataset_path,
-                                                 metrics.cluster.predict_to_clustering_error(true_labels, predict_labels)))
+                                                 metrics.cluster.predict_to_clustering_error(true_labels,
+                                                                                             predict_labels)))
 
-                writer.add_scalar('/NMI', nmi, epoch)
-                writer.add_scalar('/ARI', ari, epoch)
-                writer.add_scalar('/Acc', clus_acc, epoch)
+                summ_writer.add_scalar('/NMI', nmi, epoch)
+                summ_writer.add_scalar('/ARI', ari, epoch)
+                summ_writer.add_scalar('/Acc', clus_acc, epoch)
 
             # Self-Organize and Backpropagate
             avg_loss = 0
@@ -179,19 +179,11 @@ def train_full_model(root, dataset_path, parameters, device, use_cuda, out_folde
                 else:
                     out = 0.0
 
-                # if batch_idx % args.log_interval == 0:
-                #     print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss SOM: {:.6f}'.format(epoch,
-                #                                                                        batch_idx * len(sample),
-                #                                                                        len(train_loader.dataset),
-                #                                                                        100. * batch_idx/len(train_loader),
-                #                                                                        out))
                 avg_loss += out
                 s += len(sample)
-
     
             samples = None
             t = None
-
             #  Calculate metrics or plot without change SOM map
             if debug:
                 for batch_idx, (inputs, targets) in enumerate(train_loader):
@@ -206,16 +198,15 @@ def train_full_model(root, dataset_path, parameters, device, use_cuda, out_folde
                         t = np.append(t, targets.cpu().detach().numpy(), axis=0)
 
                 centers, relevances, ma = model.som.get_prototypes()
-
                 som_plotter.plot_data(samples, t, centers.cpu(), relevances.cpu()*0.1)
                 summ_writer.add_scalar('Nodes', len(centers), epoch)
 
                 for center in centers:
                     t = np.append(t, [10], axis=0)
                 samples = np.append(samples, centers.cpu().detach().numpy(), axis=0)
-                tsne = cumlTSNE(n_components = 2, method = 'barnes_hut')
+                tsne = cumlTSNE(n_components=2, method='barnes_hut')
                 embedding = tsne.fit_transform(samples)
-                tsne_plotter.plot_data(embedding, t, None,None)
+                tsne_plotter.plot_data(embedding, t, None, None)
 
             print("Epoch: %d avg_loss: %.6f\n" % (epoch, avg_loss/s))
             summ_writer.add_scalar('Loss/train', avg_loss/s, epoch)
@@ -230,24 +221,21 @@ def train_full_model(root, dataset_path, parameters, device, use_cuda, out_folde
         if not os.path.exists(join(args.out_folder, args.dataset.split(".arff")[0])):
             os.makedirs(join(args.out_folder, args.dataset.split(".arff")[0]))
 
-
         print("Homogeneity: %0.3f" % metrics.cluster.homogeneity_score(true_labels, predict_labels))
         print("Completeness: %0.3f" % metrics.cluster.completeness_score(true_labels, predict_labels))
         print("V-measure: %0.3f" % metrics.cluster.v_measure_score(true_labels, predict_labels))
-        print("Normalized Mutual Information (NMI): %0.3f" % 
-                            metrics.cluster.nmi(true_labels, predict_labels))
-        print("Adjusted Rand Index (ARI): %0.3f" % 
-                            metrics.cluster.ari(true_labels, predict_labels))
-        print("Clustering Accuracy (ACC): %0.3f" % 
-                            metrics.cluster.acc(true_labels, predict_labels))
+        print("Normalized Mutual Information (NMI): %0.3f" % metrics.cluster.nmi(true_labels, predict_labels))
+        print("Adjusted Rand Index (ARI): %0.3f" % metrics.cluster.ari(true_labels, predict_labels))
+        print("Clustering Accuracy (ACC): %0.3f" % metrics.cluster.acc(true_labels, predict_labels))
 
         filename = dataset_path.split(".arff")[0] + ".results"
         model.write_output(join(out_folder, filename), cluster_result)
 
         print('{0} \tCE: {1:.3f}'.format(dataset_path,
-                                         metrics.cluster.predict_to_clustering_error(true_labels, predict_labels)))
+                                         metrics.cluster.predict_to_clustering_error(true_labels,
+                                                                                     predict_labels)))
 
-        if(debug):
+        if debug:
             som_plotter.plot_hold()
             tsne_plotter.plot_hold()
 
@@ -303,7 +291,6 @@ def argument_parser():
     parser.add_argument('--out-folder', type=str, default='results/', help='Folder to output results')
     parser.add_argument('--batch-size', type=int, default=2, help='input batch size')
 
-    parser.add_argument('--epochs', type=int, default=80, help='input total epoch')
     parser.add_argument('--input-paths', default=None, help='Input Paths')
     parser.add_argument('--nmax', type=int, default=None, help='number of nodes')
 
@@ -350,7 +337,6 @@ if __name__ == '__main__':
     root = args.root
     dataset_path = args.dataset
     batch_size = args.batch_size
-    epochs = args.epochs
     debug = args.debug
     n_samples = args.n_samples
     lr_cnn = args.lr_cnn
