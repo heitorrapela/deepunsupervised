@@ -86,11 +86,17 @@ def weightedMSELoss(output, target, relevance):
 
 
 def train_full_model(root, dataset_path, parameters, device, use_cuda,
-                     out_folder, debug, n_samples, lr_cnn, summ_writer):
+                     out_folder, debug, n_samples, lr_cnn, summ_writer, print_debug):
     dataset = Datasets(dataset=dataset_path, root_folder=root, debug=debug, n_samples=n_samples)
 
     som_plotter = Plotter()
     tsne_plotter = Plotter()
+
+    # Initialize all meters
+    data_timer = utils.Timer()
+    batch_timer = utils.Timer()
+    batch_time = utils.AverageMeter()
+    data_time = utils.AverageMeter()
 
     for param_set in parameters.itertuples():
 
@@ -131,9 +137,9 @@ def train_full_model(root, dataset_path, parameters, device, use_cuda,
         for epoch in range(param_set.epochs):
 
             # Self-Organize
-            for batch_idx, (sample, target) in enumerate(train_loader):
-                sample, target = sample.to(device), target.to(device)
-                model(sample)
+            #for batch_idx, (sample, target) in enumerate(train_loader):
+            #    sample, target = sample.to(device), target.to(device)
+            #    model(sample)
 
             if debug:
                 cluster_result, predict_labels, true_labels = model.cluster(test_loader)
@@ -157,7 +163,11 @@ def train_full_model(root, dataset_path, parameters, device, use_cuda,
             # Self-Organize and Backpropagate
             avg_loss = 0
             s = 0
+            data_timer.tic()
+            batch_timer.tic()
             for batch_idx, (sample, target) in enumerate(train_loader):
+
+                data_time.update(data_timer.toc())  # measure data loading time
                 #  print("id sample: ", batch_idx, " , target:" ,target)
 
                 #  print("***********************************************************************")
@@ -182,6 +192,17 @@ def train_full_model(root, dataset_path, parameters, device, use_cuda,
                 avg_loss += out
                 s += len(sample)
     
+                batch_time.update(batch_timer.toc())
+                data_timer.toc()
+
+                if(print_debug):
+                    print('[{0:6d}/{1:6d}]\t'
+                    '{batch_time.val:.4f} ({batch_time.avg:.4f})\t'
+                    '{data_time.val:.4f} ({data_time.avg:.4f})\t'.format(
+                    batch_idx, len(train_loader), batch_time=batch_time,
+                    data_time=data_time))
+
+
             samples = None
             t = None
             #  Calculate metrics or plot without change SOM map
@@ -210,6 +231,7 @@ def train_full_model(root, dataset_path, parameters, device, use_cuda,
 
             print("Epoch: %d avg_loss: %.6f\n" % (epoch, avg_loss/s))
             summ_writer.add_scalar('Loss/train', avg_loss/s, epoch)
+
 
         #  Need to change train loader to test loader...
         model.eval()
@@ -302,6 +324,7 @@ def argument_parser():
     parser.add_argument('--debug', action='store_true', help='Enables debug mode')
     parser.add_argument('--n-samples', type=int, default=100, help='Dataset Number of Samples')
     parser.add_argument('--lr-cnn', type=float, default=0.00001, help='Learning Rate of CNN Model')
+    parser.add_argument('--print', action='store_true', help='Print time')
 
     return parser.parse_args()
 
@@ -340,6 +363,7 @@ if __name__ == '__main__':
     debug = args.debug
     n_samples = args.n_samples
     lr_cnn = args.lr_cnn
+    print_debug = args.print
 
     input_paths = utils.read_lines(args.input_paths) if args.input_paths is not None else None
     n_max = args.nmax
@@ -372,4 +396,4 @@ if __name__ == '__main__':
 
         train_full_model(root=root, dataset_path=dataset_path, parameters=parameters,
                          device=device, use_cuda=use_cuda, out_folder=out_folder,
-                         debug=debug, n_samples=n_samples, lr_cnn=lr_cnn, summ_writer=writer)
+                         debug=debug, n_samples=n_samples, lr_cnn=lr_cnn, summ_writer=writer, print_debug=print_debug)
