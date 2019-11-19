@@ -7,7 +7,7 @@ from models.som import SOM
 
 
 class Net(nn.Module):
-    def __init__(self, d_in=1, n_conv_layers=3, max_pool=True, hw_in=28, som_input=2, filters_list=[20, 50],
+    def __init__(self, d_in=1, n_conv_layers=3, batch_norm=False, max_pool=True, hw_in=28, som_input=2, filters_list=[20, 50],
                  kernel_size_list=[5, 5], stride_size_list=[1, 1], padding_size_list=[0, 0], max_pool2d_size=2,
                  n_max=20, at=0.985, eb=0.1, ds_beta=0.5, eps_ds=1.,  device='cpu'):
         super(Net, self).__init__(),
@@ -16,6 +16,7 @@ class Net(nn.Module):
         self.d_in = d_in
         self.hw_out = hw_in
         self.max_pool = max_pool
+        self.batch_norm = batch_norm
         self.n_conv_layers = n_conv_layers
         self.filters_list = [d_in] + list(np.power(2, self.generate_cnn_filters(filters_list)))
         self.max_pool2d_size = max_pool2d_size
@@ -38,7 +39,8 @@ class Net(nn.Module):
                                                           self.kernel_size_list[i],
                                                           self.stride_size_list[i],
                                                           self.padding_size_list[i]),
-                                                nn.ReLU(),
+                                                nn.BatchNorm2d(self.filters_list[i+1]) if self.batch_norm else nn.Identity(),
+                                                nn.ReLU(inplace=True),
                                                 nn.MaxPool2d(self.max_pool2d_size,
                                                              self.max_pool2d_size) if self.max_pool else nn.Identity()))
             else:
