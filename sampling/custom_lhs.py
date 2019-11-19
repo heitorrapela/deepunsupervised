@@ -62,10 +62,13 @@ class SOMLHS:
 
 class FullModelLHS (SOMLHS):
 
-	def __init__(self, n_conv=None, som_in=None, max_pool=None, max_pool2d_size=None, filters_pow=None,
+	def __init__(self, lr_cnn=None, n_conv=None, som_in=None, max_pool=None, max_pool2d_size=None, filters_pow=None,
 				 kernel_size=None, n_max=None, at=None, eb=None, ds_beta=None, eps_ds=None, epochs=None,
 				 seed=None, criterion='c'):
 		super(FullModelLHS, self).__init__(n_max, at, eb, ds_beta, eps_ds, epochs, seed, criterion)
+
+		if lr_cnn is None:
+			lr_cnn = [0.00001, 0.001]
 
 		if n_conv is None:
 			n_conv = [1, 5]
@@ -85,6 +88,7 @@ class FullModelLHS (SOMLHS):
 		if kernel_size is None:
 			kernel_size = [0.5, 3.5]
 
+		self.lr_cnn = np.array(lr_cnn)
 		self.n_conv = np.array(n_conv)
 		self.som_in = np.array(som_in)
 		self.max_pool = np.array(max_pool)
@@ -92,11 +96,11 @@ class FullModelLHS (SOMLHS):
 		self.filters_pow = np.array(filters_pow)
 		self.kernel_size = np.array(kernel_size)
 
-		full_limits = np.array([self.n_conv, self.som_in, self.max_pool,
+		full_limits = np.array([self.lr_cnn, self.n_conv, self.som_in, self.max_pool,
 								self.max_pool2d_size, self.filters_pow, self.kernel_size])
 		self.limits = np.concatenate((full_limits, self.limits))
 
-		full_params_names = ['n_conv', 'som_in', 'max_pool', 'max_pool2d_size', 'filters_pow', 'kernel_size']
+		full_params_names = ['lr_cnn', 'n_conv', 'som_in', 'max_pool', 'max_pool2d_size', 'filters_pow', 'kernel_size']
 		self.params_names = np.concatenate((full_params_names, self.params_names))
 
 		self.lhs = LHS(self.limits, self.criterion)
