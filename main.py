@@ -138,29 +138,6 @@ def train_full_model(root, dataset_path, parameters, device, use_cuda,
 
         model.train()
         for epoch in range(param_set.epochs):
-            # Self-Organize
-            # for batch_idx, (sample, target) in enumerate(train_loader):
-            #    sample, target = sample.to(device), target.to(device)
-            #    model(sample)
-
-            if debug:
-                cluster_result, predict_labels, true_labels = model.cluster(test_loader)
-                print("Homogeneity: %0.3f" % metrics.cluster.homogeneity_score(true_labels, predict_labels))
-                print("Completeness: %0.3f" % metrics.cluster.completeness_score(true_labels, predict_labels))
-                print("V-measure: %0.3f" % metrics.cluster.v_measure_score(true_labels, predict_labels))
-                nmi = metrics.cluster.nmi(true_labels, predict_labels)
-                print("Normalized Mutual Information (NMI): %0.3f" % nmi)
-                ari = metrics.cluster.ari(true_labels, predict_labels)
-                print("Adjusted Rand Index (ARI): %0.3f" % ari)
-                clus_acc = metrics.cluster.acc(true_labels, predict_labels)
-                print("Clustering Accuracy (ACC): %0.3f" % clus_acc)
-                print('{0} \tCE: {1:.3f}'.format(dataset_path,
-                                                 metrics.cluster.predict_to_clustering_error(true_labels,
-                                                                                             predict_labels)))
-
-                summ_writer.add_scalar('/NMI', nmi, epoch)
-                summ_writer.add_scalar('/ARI', ari, epoch)
-                summ_writer.add_scalar('/Acc', clus_acc, epoch)
 
             # Self-Organize and Backpropagate
             avg_loss = 0
@@ -169,23 +146,16 @@ def train_full_model(root, dataset_path, parameters, device, use_cuda,
             batch_timer.tic()
             for batch_idx, (sample, target) in enumerate(train_loader):
 
-                data_time.update(data_timer.toc())  # measure data loading time
-                #  print("id sample: ", batch_idx, " , target:" ,target)
-
-                #  print("***********************************************************************")
+                data_time.update(data_timer.toc())
                 sample, target = sample.to(device), target.to(device)
                 optimizer.zero_grad()
-
                 samples_high_at, weights_unique_nodes_high_at, relevances = model(sample)
+
 
                 #  if only new nodes were created, the loss is zero, no need to backprobagate it
                 if len(samples_high_at) > 0:
                     weights_unique_nodes_high_at = weights_unique_nodes_high_at.view(-1, model.som_input_size)
-
-                    # out = loss(samples_high_at, weights_unique_nodes_high_at)
-                    # print("msel out:", out)
                     out = weightedMSELoss(samples_high_at, weights_unique_nodes_high_at, relevances)
-                    # print("wmes out:", out)
                     out.backward()
                     optimizer.step()
                 else:
@@ -196,6 +166,25 @@ def train_full_model(root, dataset_path, parameters, device, use_cuda,
     
                 batch_time.update(batch_timer.toc())
                 data_timer.toc()
+
+                if debug:
+                    cluster_result, predict_labels, true_labels = model.cluster(test_loader)
+                    print("Homogeneity: %0.3f" % metrics.cluster.homogeneity_score(true_labels, predict_labels))
+                    print("Completeness: %0.3f" % metrics.cluster.completeness_score(true_labels, predict_labels))
+                    print("V-measure: %0.3f" % metrics.cluster.v_measure_score(true_labels, predict_labels))
+                    nmi = metrics.cluster.nmi(true_labels, predict_labels)
+                    print("Normalized Mutual Information (NMI): %0.3f" % nmi)
+                    ari = metrics.cluster.ari(true_labels, predict_labels)
+                    print("Adjusted Rand Index (ARI): %0.3f" % ari)
+                    clus_acc = metrics.cluster.acc(true_labels, predict_labels)
+                    print("Clustering Accuracy (ACC): %0.3f" % clus_acc)
+                    print('{0} \tCE: {1:.3f}'.format(dataset_path,
+                                                     metrics.cluster.predict_to_clustering_error(true_labels,
+                                                                                                 predict_labels)))
+
+                    summ_writer.add_scalar('/NMI', nmi, epoch)
+                    summ_writer.add_scalar('/ARI', ari, epoch)
+                    summ_writer.add_scalar('/Acc', clus_acc, epoch)
 
                 if print_debug:
                     print('[{0:6d}/{1:6d}]\t'
@@ -259,7 +248,7 @@ def train_full_model(root, dataset_path, parameters, device, use_cuda,
 
         if debug:
             som_plotter.plot_hold()
-            tsne_plotter.plot_hold()
+            # tsne_plotter.plot_hold()
 
 
 def run_lhs_som(filename, lhs_samples=1):

@@ -68,18 +68,21 @@ class Net(nn.Module):
         predict_labels = []
         true_labels = []
 
+
         for batch_idx, (samples, targets) in enumerate(dataloader):
             samples, targets = samples.to(self.device), targets.to(self.device)
             outputs = self.cnn_extract_features(samples)
 
             _, bmu_indexes = self.som.get_winners(outputs.to(self.device))
-            ind_max = bmu_indexes.item()
-            clustering = clustering.append({'sample_ind': batch_idx,
-                                            'cluster': ind_max},
-                                           ignore_index=True)
-            predict_labels.append(ind_max)
-            true_labels.append(targets.item())
 
+            for index, bmu_index in enumerate(bmu_indexes):
+                ind_max = bmu_index.item()
+
+                clustering = clustering.append({'sample_ind': batch_idx,
+                                                'cluster': ind_max},
+                                               ignore_index=True)
+                predict_labels.append(ind_max)
+                true_labels.append(targets[index].item())
             # print("----------------------------------------------")
             # print("Saida CNN: ", outputs)
             # print("Prototipo: ", weights_unique_nodes_high_at)
