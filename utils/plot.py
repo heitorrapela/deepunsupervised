@@ -2,6 +2,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import numpy as np    
 
+
 class Plotter:
     def __init__(self):
 
@@ -32,15 +33,15 @@ class Plotter:
                                          verticalalignment='center',
                                          size=11))
 
-            if(centers is not None and relevances is not None):
+            if centers is not None and relevances is not None:
                 self.scat_centers = self.ax.errorbar(centers[:, 0], centers[:, 1],
-                                        xerr=relevances[:, 0], yerr=relevances[:, 1], alpha=0.5, fmt='o', c='k')
+                                                     xerr=relevances[:, 0], yerr=relevances[:, 1],
+                                                     alpha=0.5, fmt='o', c='k')
 
             self.fig.tight_layout()
             plt.show()
 
         else:
-            
             colors = (2*np.pi)*target/(target.max()*2)
             self.scat_samples.remove()
             self.scat_samples = self.ax.scatter(data[:, 0], data[:, 1], c=colors, cmap='hsv', alpha=0.5)
@@ -52,12 +53,12 @@ class Plotter:
                              horizontalalignment='center',
                              verticalalignment='center',
                              size=11)
-
             
-            if(centers is not None and relevances is not None):
+            if centers is not None and relevances is not None:
                 self.scat_centers.remove()
                 self.scat_centers = self.ax.errorbar(centers[:, 0], centers[:, 1],
-                                           xerr=relevances[:, 0], yerr=relevances[:, 1], alpha=0.5, fmt='o', c='k')
+                                                     xerr=relevances[:, 0], yerr=relevances[:, 1],
+                                                     alpha=0.5, fmt='o', c='k')
 
         plt.pause(pause_time)
 
