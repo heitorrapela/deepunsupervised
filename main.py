@@ -3,7 +3,7 @@
 import os
 
 from models.som import SOM
-from dataloaders.datasets import Datasets
+from datasets.datasets import Datasets
 import torch.backends.cudnn as cudnn
 import random
 from torch.utils.data.dataloader import DataLoader
