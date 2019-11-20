@@ -32,7 +32,7 @@ class Net(nn.Module):
                 print("Warning the size of the padding, kernel or stride list is too small!")
                 break
             last_hw_out = ((self.hw_out + 2*self.padding_size_list[i]-(self.kernel_size_list[i]-1)-1)//self.stride_size_list[i])+1
-            if last_hw_out >= 2:
+            if last_hw_out >= 2 and last_hw_out%self.max_pool2d_size==0:
                 self.hw_out = last_hw_out
                 self.hw_out = self.hw_out//self.max_pool2d_size if self.max_pool else self.hw_out
                 self.convs.append(nn.Sequential(nn.Conv2d(self.filters_list[i],

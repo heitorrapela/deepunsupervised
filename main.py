@@ -101,6 +101,14 @@ def train_full_model(root, dataset_path, parameters, device, use_cuda,
 
     for param_set in parameters.itertuples():
 
+        manual_seed = param_set.seed
+        random.seed(manual_seed)
+        torch.manual_seed(manual_seed)
+
+        if use_cuda:
+            torch.cuda.manual_seed_all(manual_seed)
+            cudnn.benchmark = True
+
         model = Net(d_in=dataset.d_in,
                     n_conv_layers=param_set.n_conv,
                     max_pool=True if param_set.max_pool else False,
@@ -118,20 +126,14 @@ def train_full_model(root, dataset_path, parameters, device, use_cuda,
                     eps_ds=param_set.eps_ds,
                     device=device)
 
-        manual_seed = param_set.seed
-        random.seed(manual_seed)
-        torch.manual_seed(manual_seed)
-
         if use_cuda:
-            torch.cuda.manual_seed_all(manual_seed)
             model.cuda()
-            cudnn.benchmark = True
 
         train_loader = DataLoader(dataset.train_data, batch_size=batch_size, shuffle=True)
         test_loader = DataLoader(dataset.test_data, shuffle=False)
 
         #  optimizer = optim.SGD(model.parameters(), lr=lr_cnn, momentum=0.5)
-        optimizer = optim.Adam(model.parameters(), lr=lr_cnn)
+        optimizer = optim.Adam(model.parameters(), lr=param_set.lr_cnn)
         loss = nn.MSELoss(reduction='sum')
 
         model.train()
@@ -277,6 +279,7 @@ def run_lhs_som(filename, lhs_samples=1):
 
 def run_lhs_full_model(filename, lhs_samples=1):
     lhs = FullModelLHS(n_conv=None,
+                       lr_cnn=None,
                        som_in=None,
                        max_pool=None,
                        max_pool2d_size=None,
