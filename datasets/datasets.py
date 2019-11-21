@@ -10,6 +10,7 @@ import torchvision.datasets as datasets
 import torchvision.transforms as transforms
 from os.path import join
 from .coil20 import COIL20
+from .colors import COLORS
 
 
 class Datasets(data.Dataset):
@@ -188,6 +189,22 @@ class Datasets(data.Dataset):
             self.d_in = 1
             self.hw_in = 32
 
+        elif dataset == "colors":
+            transform_train_list.append(transforms.ToTensor())
+
+            if flatten:
+                transform_train_list.append(ReshapeTransform((-1,)))
+
+            transform_train = transforms.Compose(transform_train_list)
+            transform_test = transform_train
+
+            self.train_data = COLORS(root=root_folder, transform=transform_train)
+            self.test_data = COLORS(root=root_folder, transform=transform_test)
+
+            data_shape = self.train_data.data.shape
+            self.dim_flatten = data_shape[1]
+            self.d_in = 3
+            self.hw_in = 1
         else:
             self.train_data = CustomDataset(load_path=join(root_folder, dataset), norm="minmax")
             self.test_data = self.train_data
