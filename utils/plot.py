@@ -1,6 +1,6 @@
-import seaborn as sns
 import matplotlib.pyplot as plt
-import numpy as np    
+import numpy as np
+from sklearn import linear_model
 
 
 class Plotter:
@@ -64,3 +64,65 @@ class Plotter:
 
     def plot_hold(self, time=10000):
         plt.pause(time)
+
+
+class HParams:
+    def __init__(self):
+        self.fig = None
+
+    def plot_hparams(self, tag, p_values, metrics):
+        return self.plot_x_y(p_values, metrics, tag)
+
+    def plot_x_y(self, x, y, title, marker="o", color='b', font_size=12):
+        self.fig, ax = plt.subplots()
+        ax.yaxis.grid()
+        ax.set_ylim([0, 1])
+
+        x = x.astype(float)
+        y = y.astype(float)
+
+        plt.rc('font', family='serif')
+        plt.title(title, fontsize=font_size)
+        plt.plot(x, y, marker, color=color, clip_on=False)
+        plt.yticks(np.linspace(0, 1, num=11))
+
+        self.plot_fit_linear(plt, x, y)
+
+        plt.tight_layout(pad=0.2)
+
+        return self.fig
+
+    def plot_fit_linear(self, to_plot, x, y):
+        # Create linear regression object
+        regr = linear_model.LinearRegression()
+
+        # Train the model using the training sets
+        regr.fit(x.reshape(-1, 1), y.reshape(-1, 1))
+
+        # Make predictions using the testing set
+        fit = regr.predict(x.reshape(-1, 1))
+
+        to_plot.plot(x, fit, color='r', clip_on=False, linewidth=6)
+
+    def plot_tensorboard_x_y(self, parameters, metric_name, metric_values, writer, dataset):
+        for param, p_values in parameters.iteritems():
+            if param == 'seed' or param == 'Index':
+                continue
+
+            figure = self.plot_hparams(param, p_values.values, metric_values)
+            writer.add_figure(param + '/' + metric_name + '_' + dataset, figure)
+            # summ_writer.add_hparams(hparam_dict=dict(param_set._asdict()),
+            #                         metric_dict={'CE_' + dataset_path.split(".arff")[0]: ce})
+
+    def check_plot_save(self, path, save, plot):
+        if save:
+            plt.savefig(path, bbox_inches='tight', pad_inches=0)
+
+        if plot:
+            plt.show()
+        else:
+            plt.close()
+
+
+
+
