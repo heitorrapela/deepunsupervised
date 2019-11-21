@@ -68,7 +68,7 @@ class FullModelLHS (SOMLHS):
 		super(FullModelLHS, self).__init__(n_max, at, eb, ds_beta, eps_ds, epochs, seed, criterion)
 
 		if lr_cnn is None:
-			lr_cnn = [0.00001, 0.001]
+			lr_cnn = [0.00001, 0.1]
 
 		if n_conv is None:
 			n_conv = [1, 5]

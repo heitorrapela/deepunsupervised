@@ -32,7 +32,7 @@ class Net(nn.Module):
                 print("Warning the size of the padding, kernel or stride list is too small!")
                 break
             last_hw_out = ((self.hw_out + 2*self.padding_size_list[i]-(self.kernel_size_list[i]-1)-1)//self.stride_size_list[i])+1
-            if last_hw_out >= 2:
+            if last_hw_out >= 2 and last_hw_out%self.max_pool2d_size==0:
                 self.hw_out = last_hw_out
                 self.hw_out = self.hw_out//self.max_pool2d_size if self.max_pool else self.hw_out
                 self.convs.append(nn.Sequential(nn.Conv2d(self.filters_list[i],
@@ -73,13 +73,15 @@ class Net(nn.Module):
             outputs = self.cnn_extract_features(samples)
 
             _, bmu_indexes = self.som.get_winners(outputs.to(self.device))
-            ind_max = bmu_indexes.item()
-            clustering = clustering.append({'sample_ind': batch_idx,
-                                            'cluster': ind_max},
-                                           ignore_index=True)
-            predict_labels.append(ind_max)
-            true_labels.append(targets.item())
 
+            for index, bmu_index in enumerate(bmu_indexes):
+                ind_max = bmu_index.item()
+
+                clustering = clustering.append({'sample_ind': batch_idx,
+                                                'cluster': ind_max},
+                                               ignore_index=True)
+                predict_labels.append(ind_max)
+                true_labels.append(targets[index].item())
             # print("----------------------------------------------")
             # print("Saida CNN: ", outputs)
             # print("Prototipo: ", weights_unique_nodes_high_at)

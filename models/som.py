@@ -193,13 +193,15 @@ class SOM(nn.Module):
 
         for batch_idx, (inputs, targets) in enumerate(dataloader):
             _, bmu_indexes = self.get_winners(inputs.to(self.device))
-            ind_max = bmu_indexes.item()
 
-            clustering = clustering.append({'sample_ind': batch_idx,
-                                            'cluster': ind_max},
-                                           ignore_index=True)
-            predict_labels.append(ind_max)
-            true_labels.append(targets.item())
+            for index, bmu_index in enumerate(bmu_indexes):
+                ind_max = bmu_index.item()
+
+                clustering = clustering.append({'sample_ind': batch_idx,
+                                                'cluster': ind_max},
+                                               ignore_index=True)
+                predict_labels.append(ind_max)
+                true_labels.append(targets[index].item())
 
         return clustering, predict_labels, true_labels
 

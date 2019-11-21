@@ -30,6 +30,7 @@ def run_lhs_som(filename, lhs_samples=1):
 
 def run_lhs_full_model(filename, lhs_samples=1):
     lhs = FullModelLHS(n_conv=None,
+                       lr_cnn=None,
                        som_in=None,
                        max_pool=None,
                        max_pool2d_size=None,
