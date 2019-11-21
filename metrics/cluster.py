@@ -5,6 +5,7 @@ import pandas as pd
 from scipy.io import arff
 from sklearn.metrics import confusion_matrix as sk_confusion
 import sklearn
+from utils import utils
 
 
 def homogeneity_score(true_labels, predict_labels):
@@ -155,30 +156,13 @@ def results_to_clustering_error(data_file, results_file):
 
     data, _ = arff.loadarff(open(data_file, 'r'))
     data = pd.DataFrame(data)
-    results = open(results_file, 'r')
 
-    # first line of results contains the number of found 
-    # clusters and the dimension of the data
-    first_line = results.readline().split()
-    dim = int(first_line[1])
+    data_n_winner, found_clusters, dim = utils.read_results(results_file)
 
     # checking whether it's multiclass multilabel (subspace clustering) problem
     if data.shape[1] > dim + 1:
         print("Multilabel")
         return
-
-    # finding found clusters id
-    # data_n_winner is a tuple data id and winner id,
-    # typical of .results files.
-    data_n_winner = []
-    for line in results:
-        line_split = line.split()
-
-        # results file contains a section with unnecessary data,
-        # which takes more than two columns. we are interested in the
-        # section with only two columns
-        if len(line_split) == 2:
-            data_n_winner.append(line_split)
 
     if not data_n_winner:  # empty list
         ce = 0
@@ -187,7 +171,7 @@ def results_to_clustering_error(data_file, results_file):
         confusion = confusion_matrix(data, data_n_winner)
         ce = confusion_to_clustering_error(confusion, data.shape[0])
 
-    return ce
+    return ce, found_clusters
 
 
 def conditional_entropy(confusion):

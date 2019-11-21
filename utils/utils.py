@@ -25,6 +25,30 @@ def read_lines(file_path):
     return data
 
 
+def read_results(results_file):
+    results = open(results_file, 'r')
+    # first line of results contains the number of found
+    # clusters and the dimension of the data
+    first_line = results.readline().split()
+    found_clusters = int(first_line[0])
+    dim = int(first_line[1])
+
+    # finding found clusters id
+    # data_n_winner is a tuple data id and winner id,
+    # typical of .results files.
+    data_n_winner = []
+    for line in results:
+        line_split = line.split()
+
+        # results file contains a section with unnecessary data,
+        # which takes more than two columns. we are interested in the
+        # section with only two columns
+        if len(line_split) == 2:
+            data_n_winner.append(line_split)
+
+    return data_n_winner, found_clusters, dim
+
+
 def get_data_targets(path, file, target_idx=None):
     if file.endswith(".arff"):
         data, _ = arff.loadarff(open(join(path, file), 'rb'))

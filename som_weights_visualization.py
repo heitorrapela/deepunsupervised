@@ -11,6 +11,7 @@ from utils.plot import *
 from sampling.custom_lhs import *
 from argument_parser import argument_parser
 
+
 def run_lhs_som(filename, lhs_samples=1):
     lhs = SOMLHS(n_max=[5, 10],
                  at=[0.70, 0.999],
@@ -25,8 +26,8 @@ def run_lhs_som(filename, lhs_samples=1):
 
     return sampling
 
-def som_weights_visualization(root, dataset_path, parameters, out_folder, grid_rows=10, grid_cols=10,
-              lhs_samples=250):
+
+def som_weights_visualization(root, dataset_path, parameters, grid_rows=10, grid_cols=10, lhs_samples=250):
     dataset = Datasets(dataset=dataset_path, root_folder=root, flatten=True)
 
     for param_set in parameters.itertuples():
@@ -60,23 +61,25 @@ def som_weights_visualization(root, dataset_path, parameters, out_folder, grid_r
                 ind_max = bmu_indexes.item()
                 weights = som.weights[bmu_indexes]
 
-                if (dataset.d_in == 1):
+                if dataset.d_in == 1:
                     ax1.imshow(sample.view(dataset.hw_in, dataset.hw_in), cmap='gray')
                     ax2.imshow(weights.view(dataset.hw_in, dataset.hw_in), cmap='gray')
                     images = [image.reshape(dataset.hw_in, dataset.hw_in) for image in som.weights]
                 else:
-                    ax1.imshow(sample.view(dataset.d_in,dataset.hw_in, dataset.hw_in).numpy().transpose((1,2,0)))
-                    ax2.imshow(weights.view(dataset.d_in,dataset.hw_in, dataset.hw_in).numpy().transpose((1,2,0)))
+                    ax1.imshow(sample.view(dataset.d_in, dataset.hw_in, dataset.hw_in).numpy().transpose((1, 2, 0)))
+                    ax2.imshow(weights.view(dataset.d_in, dataset.hw_in, dataset.hw_in).numpy().transpose((1, 2, 0)))
                     images = [image.reshape(dataset.hw_in, dataset.hw_in, dataset.d_in) for image in som.weights]
 
                 for x in range(grid_rows):
                     for y in range(grid_cols):
-                        if (ind_max == (10 * (y) + (x))):
+                        if ind_max == (10 * y + x):
                             ax3 = fig.add_subplot(gs02[y, x])
-                            if (dataset.d_in == 1):
-                                ax3.imshow(images[10 * (y) + (x)], cmap='gray')
+                            if dataset.d_in == 1:
+                                ax3.imshow(images[10 * y + x], cmap='gray')
                             else:
-                                ax3.imshow(images[10 * (y) + (x)].view(dataset.d_in, dataset.hw_in, dataset.hw_in).numpy().transpose((1, 2, 0)))
+                                ax3.imshow(images[10 * y + x].view(dataset.d_in,
+                                                                   dataset.hw_in,
+                                                                   dataset.hw_in).numpy().transpose((1, 2, 0)))
                             ax3.set_xlabel('{label}'.format(label=ind_max))
                             plt.xticks(np.array([]))
                             plt.yticks(np.array([]))
@@ -103,5 +106,5 @@ if __name__ == '__main__':
     else:
         parameters = utils.read_params(params_file_som)
 
-    som_weights_visualization(root=args.root, dataset_path=args.dataset, parameters=parameters, out_folder=out_folder,
-              lhs_samples=args.lhs_samples)
+    som_weights_visualization(root=args.root, dataset_path=args.dataset,
+                              parameters=parameters, lhs_samples=args.lhs_samples)
