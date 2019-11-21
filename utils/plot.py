@@ -1,66 +1,124 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from sklearn import linear_model
+from matplotlib.widgets import Slider
 
 
 class Plotter:
-    def __init__(self):
+    def __init__(self, init_dim_x=0, init_dim_y=0):
 
-        self.fig = None 
+        self.fig = None
         self.ax = None
         self.scat_samples = None
         self.scat_centers = None
         self.colors = None
         self.labels_samples = None
+        self.input_dim = None
+        self.init_dim_x = init_dim_x
+        self.init_dim_y = init_dim_y
+        self.dimx = None
+        self.dimy = None
 
-    def plot_data(self, data, target, centers=None, relevances=None, pause_time=0.01):
+    def update(self, val):
+        self.init_dim_x = int(self.dimx.val)
+        self.init_dim_y = int(self.dimy.val)
+
+    def press(self, event):
+        if event.key == 'right':
+            self.init_dim_x = self.init_dim_x + 1
+        elif event.key == 'left':
+            self.init_dim_x = self.init_dim_x - 1
+        elif event.key == 'up':
+            self.init_dim_y = self.init_dim_y + 1
+        elif event.key == 'down':
+            self.init_dim_y = self.init_dim_y - 1
+
+        if self.init_dim_x < 0:
+            self.init_dim_x = 0
+        if self.init_dim_x >= self.input_dim:
+            self.init_dim_x = self.input_dim - 1
+        if self.init_dim_y < 0:
+            self.init_dim_y = 0
+        if self.init_dim_y >= self.input_dim:
+            self.init_dim_y = self.input_dim - 1
+
+        if event.key == 'right' or event.key == 'left':
+            self.dimx.set_val(self.init_dim_x)
+        elif event.key == 'up' or event.key == 'down':
+            self.dimy.set_val(self.init_dim_y)
+
+        self.fig.canvas.draw_idle()
+
+    def plot_data(self, data, target, centers=None, relevances=None, pause_time=0.01, print_labels=False):
+        self.input_dim = data.shape[-1]
 
         if self.fig is None:
             plt.ion()
-            self.fig, self.ax = plt.subplots()
-            self.ax.set_xlabel('dim0', fontsize=15)
-            self.ax.set_ylabel('dim1', fontsize=15)
+            self.fig, self.ax = plt.subplots(figsize=(10,7))
+            self.ax.set_xlabel('Dim {}'.format(self.init_dim_x), fontsize=15)
+            self.ax.set_ylabel('Dim {}'.format(self.init_dim_y), fontsize=15)
             self.ax.grid(True)
-            
-            colors = (2*np.pi)*target/(target.max()*2)
-            self.scat_samples = self.ax.scatter(data[:, 0], data[:, 1], c=colors, cmap='hsv', alpha=0.5)
-            
+
+            axdimx = plt.axes([0.2, 0.009, 0.65, 0.03], facecolor='lightgoldenrodyellow')
+            axdimy = plt.axes([0.007, 0.17, 0.03, 0.65], facecolor='lightgoldenrodyellow')
+
+            self.dimx = Slider(axdimx, 'Dim x', int(0), int(self.input_dim - 1), valfmt="%1.0f",
+                               valinit=self.init_dim_x,
+                               valstep=1, orientation='horizontal')
+            self.dimy = Slider(axdimy, 'Dim y', int(0), int(self.input_dim - 1), valfmt="%1.0f",
+                               valinit=self.init_dim_y,
+                               valstep=1, orientation='vertical')
+
+            self.dimx.on_changed(self.update)
+            self.dimy.on_changed(self.update)
+            self.fig.canvas.mpl_connect('key_press_event', self.press)
+
+            colors = (2 * np.pi) * target / (target.max() * 2)
+            self.scat_samples = self.ax.scatter(data[:, self.init_dim_x], data[:, self.init_dim_y], c=colors,
+                                                cmap='hsv', alpha=0.5)
+
             self.labels_samples = []
-            for i, label in enumerate(target):
-                self.labels_samples.append(self.ax.annotate(label, 
-                                         (data[:, 0][i], data[:, 1][i]),
-                                         horizontalalignment='center',
-                                         verticalalignment='center',
-                                         size=11))
+            if print_labels:
+                for i, label in enumerate(target):
+                    self.labels_samples.append(self.ax.annotate(label,
+                                                                (data[:, self.init_dim_x][i],
+                                                                 data[:, self.init_dim_y][i]),
+                                                                horizontalalignment='center',
+                                                                verticalalignment='center',
+                                                                size=11))
 
             if centers is not None and relevances is not None:
-                self.scat_centers = self.ax.errorbar(centers[:, 0], centers[:, 1],
-                                                     xerr=relevances[:, 0], yerr=relevances[:, 1],
+                self.scat_centers = self.ax.errorbar(centers[:, self.init_dim_x], centers[:, self.init_dim_y],
+                                                     xerr=relevances[:, self.init_dim_x],
+                                                     yerr=relevances[:, self.init_dim_y],
                                                      alpha=0.5, fmt='o', c='k')
-
-            self.fig.tight_layout()
             plt.show()
-
         else:
-            colors = (2*np.pi)*target/(target.max()*2)
+            self.ax.set_xlabel('Dim {}'.format(self.init_dim_x), fontsize=15)
+            self.ax.set_ylabel('Dim {}'.format(self.init_dim_y), fontsize=15)
+            colors = (2 * np.pi) * target / (target.max() * 2)
             self.scat_samples.remove()
-            self.scat_samples = self.ax.scatter(data[:, 0], data[:, 1], c=colors, cmap='hsv', alpha=0.5)
+            self.scat_samples = self.ax.scatter(data[:, self.init_dim_x], data[:, self.init_dim_y], c=colors,
+                                                cmap='hsv', alpha=0.5)
 
-            for i, label in enumerate(target):
-                self.labels_samples[i].remove()
-                self.labels_samples[i] = self.ax.annotate(label, 
-                             (data[:, 0][i], data[:, 1][i]),
-                             horizontalalignment='center',
-                             verticalalignment='center',
-                             size=11)
-            
+            if print_labels:
+                for i, label in enumerate(target):
+                    self.labels_samples[i].remove()
+                    self.labels_samples[i] = self.ax.annotate(label,
+                                                              (
+                                                                  data[:, self.init_dim_x][i],
+                                                                  data[:, self.init_dim_y][i]),
+                                                              horizontalalignment='center',
+                                                              verticalalignment='center',
+                                                              size=11)
+
             if centers is not None and relevances is not None:
                 self.scat_centers.remove()
-                self.scat_centers = self.ax.errorbar(centers[:, 0], centers[:, 1],
-                                                     xerr=relevances[:, 0], yerr=relevances[:, 1],
+                self.scat_centers = self.ax.errorbar(centers[:, self.init_dim_x], centers[:, self.init_dim_y],
+                                                     xerr=relevances[:, self.init_dim_x],
+                                                     yerr=relevances[:, self.init_dim_y],
                                                      alpha=0.5, fmt='o', c='k')
-
-        plt.pause(pause_time)
+        plt.waitforbuttonpress(timeout=pause_time)
 
     def plot_hold(self, time=10000):
         plt.pause(time)
