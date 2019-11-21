@@ -1,3 +1,4 @@
+# Author: Heitor Rapela Medeiros <hrm@cin.ufpe.br>.
 import numpy as np
 from torchvision.datasets import VisionDataset
 import random
