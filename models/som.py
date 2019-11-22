@@ -106,11 +106,10 @@ class SOM(nn.Module):
         self.relevance[index] = torch.div(one_tensor,
                                           one_tensor + torch.exp(torch.div(torch.sub(self.moving_avg[index], avg),
                                                                            torch.mul(self.eps_ds,
-                                                                                     torch.sub(maximum,
-                                                                                               minimum) + 1e-7))))
+                                                                                     torch.sub(maximum, minimum)))))
         # print("relevances:", self.relevance)
         # if (max - min) == 0 or (mv_avg - avg) == 0 then set to 1
-        # self.relevance[self.relevance != self.relevance] = 1.
+        self.relevance[self.relevance != self.relevance] = 1.
 
         delta = torch.mul(self.lr, torch.sub(w, self.weights[index]))
         self.weights[index] = torch.add(self.weights[index], delta)

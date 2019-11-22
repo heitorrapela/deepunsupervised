@@ -116,7 +116,6 @@ if __name__ == '__main__':
                           workers=args.workers, out_folder=out_folder, batch_size=batch_size, n_max=n_max,
                           evaluate=args.eval, summ_writer=writer, coil20_unprocessed=coil20_unprocessed)
 
-
     else:
         params_file_full = args.params_file if args.params_file is not None else "arguments/default_full_model.lhs"
 
