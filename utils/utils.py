@@ -71,7 +71,13 @@ def read_header(files, folder, header_rows, save_parameters=True):
                 results = pd.read_csv(join(folder, file), skiprows=header_rows + 1, header=None)
 
                 datasets = results.iloc[0]
-                if 'n_max' in datasets.values:
+
+                if 'lr_cnn' in datasets.values:
+                    datasets = datasets[1: datasets[datasets == "lr_cnn"].index[0]]
+                    if save_parameters:
+                        save_params_file(results, "lr_cnn", folder)
+
+                elif 'n_max' in datasets.values:
                     datasets = datasets[1: datasets[datasets == "n_max"].index[0]]
                     if save_parameters:
                         save_params_file(results, "n_max", folder)
@@ -92,7 +98,9 @@ def read_params_and_results(file_name, rows=5):
 
     first_param_idx = results.iloc[0]
 
-    if 'n_max' in first_param_idx.values:
+    if 'lr_cnn' in first_param_idx.values:
+        first_param_idx = first_param_idx[first_param_idx == "lr_cnn"].index[0]
+    elif 'n_max' in first_param_idx.values:
         first_param_idx = first_param_idx[first_param_idx == "n_max"].index[0]
     elif 'at' in first_param_idx.values:
         first_param_idx = first_param_idx[first_param_idx == "at"].index[0]

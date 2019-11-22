@@ -46,13 +46,13 @@ def dataset_to_clustering_error(results_paths, dataset_name, root, output_path, 
 
     output_file = open(output_path + '.csv', 'w+')
 
-    line = "max_value," + str(np.nanmax(ce)) + "\n"
+    line = "max_value," + str(np.nanmax(ces)) + "\n"
 
-    max_value_index = np.nanargmax(ces[len(ces) - 1])
+    max_value_index = np.nanargmax(ces)
     line += "num_nodes," + str(num_nodes[max_value_index]) + "\n"
     line += "index_set," + str(max_value_index) + "\n"
 
-    write_csv_body([ces], [dataset_name], line, [np.nanmean(ce)], output_file, param_file, [np.nanstd(ces)])
+    write_csv_body([ces], [dataset_name], line, [np.nanmean(ces)], output_file, param_file, [np.nanstd(ces)])
 
 
 def true_to_clustering_error(results_paths, true_path, output_path, repeats=None, param_file=None):
