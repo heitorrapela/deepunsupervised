@@ -1,3 +1,5 @@
+# Author: Pedro Braga <phmb4@cin.ufpe.br>.
+
 import os
 import pandas as pd
 from scipy.io import arff
@@ -47,6 +49,94 @@ def read_results(results_file):
             data_n_winner.append(line_split)
 
     return data_n_winner, found_clusters, dim
+
+
+def read_header(files, folder, header_rows, save_parameters=True):
+    datasets = []
+    folds = []
+    headers = []
+
+    for file in files:
+        if ".csv" in file:
+            header = pd.read_csv(join(folder, file), nrows=header_rows, header=None)
+            header = header.transpose()
+            header = header.rename(columns=header.iloc[0])
+            header = header.drop([0])
+            header = header.dropna(axis=0, how='any')
+            header = header.astype(np.float64)
+
+            headers.append(header)
+
+            if len(datasets) <= 0:
+                results = pd.read_csv(join(folder, file), skiprows=header_rows + 1, header=None)
+
+                datasets = results.iloc[0]
+                if 'n_max' in datasets.values:
+                    datasets = datasets[1: datasets[datasets == "n_max"].index[0]]
+                    if save_parameters:
+                        save_params_file(results, "n_max", folder)
+
+                elif 'at' in datasets.values:
+                    datasets = datasets[1: datasets[datasets == "at"].index[0]]
+                    if save_parameters:
+                        save_params_file(results, "at", folder)
+
+                else:
+                    datasets = datasets[1:]
+
+    return datasets, folds, headers
+
+
+def read_params_and_results(file_name, rows=5):
+    results = pd.read_csv(file_name, skiprows=rows + 1, header=None)
+
+    first_param_idx = results.iloc[0]
+
+    if 'n_max' in first_param_idx.values:
+        first_param_idx = first_param_idx[first_param_idx == "n_max"].index[0]
+    elif 'at' in first_param_idx.values:
+        first_param_idx = first_param_idx[first_param_idx == "at"].index[0]
+    else:
+        first_param_idx = None
+
+    if first_param_idx is not None:
+        params = results.drop(results.columns[range(first_param_idx)], axis=1)
+        params = params.rename(columns=params.iloc[0])
+        params = params.drop([0])
+        params = params.astype(np.float64)
+
+        results = results.drop(results.columns[range(first_param_idx, len(results.columns))], axis=1)
+        results = results.drop(results.columns[0], axis=1)
+        results = results.rename(columns=results.iloc[0])
+        results = results.drop([0])
+    else:
+        params = None
+        results = None
+
+    return params, results
+
+
+def save_params_file(results, starting_param_name, filename):
+    parameters = results.rename(columns=results.iloc[0])
+    parameters = parameters.drop([0])
+    parameters = parameters.astype(np.float64)
+    parameters = parameters.iloc[:, parameters.columns.get_loc(starting_param_name):]
+
+    min_row = parameters.min(0)
+    max_row = parameters.max(0)
+    min_max = pd.DataFrame([list(min_row), list(max_row)], columns=parameters.columns)
+
+    full_data = min_max.append(parameters, ignore_index=True)
+
+    first_column = map(str, range(len(parameters.index)))
+    first_column.insert(0, 'max')
+    first_column.insert(0, 'min')
+    full_data.insert(0, '', first_column)
+
+    if filename.endswith("/"):
+        filename = filename[:-1]
+
+    full_data.to_csv(join(filename, "parameters-" + filename + ".csv"), sep=',', index=False)
 
 
 def get_data_targets(path, file, target_idx=None):

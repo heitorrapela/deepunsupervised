@@ -2,6 +2,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 from sklearn import linear_model
 from matplotlib.widgets import Slider
+from utils import utils
+import pandas as pd
+import os
 
 
 class Plotter:
@@ -54,7 +57,7 @@ class Plotter:
 
         if self.fig is None:
             plt.ion()
-            self.fig, self.ax = plt.subplots(figsize=(10,7))
+            self.fig, self.ax = plt.subplots(figsize=(10, 7))
             self.ax.set_xlabel('Dim {}'.format(self.init_dim_x), fontsize=15)
             self.ax.set_ylabel('Dim {}'.format(self.init_dim_y), fontsize=15)
             self.ax.grid(True)
@@ -127,11 +130,42 @@ class Plotter:
 class HParams:
     def __init__(self):
         self.fig = None
+        self.image_path = "plots/"
+        if not os.path.isdir(self.image_path):
+            os.mkdir(self.image_path)
 
-    def plot_hparams(self, tag, p_values, metrics):
-        return self.plot_x_y(p_values, metrics, tag)
+    def plot_hparams(self, tag, p_values, metrics, save=False, plot=False):
+        return self.plot_x_y(p_values, metrics, tag, save=save, plot=plot)
 
-    def plot_x_y(self, x, y, title, marker="o", color='b', font_size=12):
+    # ------------------------------------------------------------------- #
+    # ---------------------- Parameters Graphs -------------------------- #
+
+    def plot_params_results(self, file_name, header_rows=5, params_to_plot=None, save=False, plot=True):
+
+        datasets, _, _ = utils.read_header([file_name], "", header_rows, save_parameters=False)
+        params, results = utils.read_params_and_results(file_name, header_rows)
+
+        if params_to_plot is None:
+            params_to_plot = params.columns
+
+        for param in params_to_plot:
+            if "seed" in param:
+                continue
+
+            for dataset in datasets:
+                matching = [result for result in results.columns if dataset in result]
+                x = []
+                y = []
+                for result in results[matching].columns:
+                    x.append(params[param])
+                    y.append(results[result])
+
+                x = pd.concat(x, ignore_index=True)
+                y = pd.concat(y, ignore_index=True)
+                x, y = np.array(x), np.array(y)
+                self.plot_x_y(x, y, "{0} - {1}".format(param, dataset), save=save, plot=plot)
+
+    def plot_x_y(self, x, y, title, marker="o", color='b', font_size=12, save=False, plot=False):
         self.fig, ax = plt.subplots()
         ax.yaxis.grid()
         ax.set_ylim([0, 1])
@@ -147,6 +181,7 @@ class HParams:
         self.plot_fit_linear(plt, x, y)
 
         plt.tight_layout(pad=0.2)
+        self.check_plot_save(path=os.path.join(self.image_path,"{}.png".format(title)), save=save, plot=plot)
 
         return self.fig
 
@@ -162,15 +197,13 @@ class HParams:
 
         to_plot.plot(x, fit, color='r', clip_on=False, linewidth=6)
 
-    def plot_tensorboard_x_y(self, parameters, metric_name, metric_values, writer, dataset):
+    def plot_tensorboard_x_y(self, parameters, metric_name, metric_values, writer, dataset, save=False, plot=False):
         for param, p_values in parameters.iteritems():
             if param == 'seed' or param == 'Index':
                 continue
 
-            figure = self.plot_hparams(param, p_values.values, metric_values)
+            figure = self.plot_hparams(param, p_values.values, metric_values, save=save, plot=plot)
             writer.add_figure(param + '/' + metric_name + '_' + dataset, figure)
-            # summ_writer.add_hparams(hparam_dict=dict(param_set._asdict()),
-            #                         metric_dict={'CE_' + dataset_path.split(".arff")[0]: ce})
 
     def check_plot_save(self, path, save, plot):
         if save:

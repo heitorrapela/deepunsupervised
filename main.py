@@ -6,7 +6,7 @@ from train_full_model import train_full_model
 import os
 
 import torch
-from utils import utils
+from utils import utils, results_eval, plot
 from torch.utils.tensorboard import SummaryWriter
 from datetime import datetime
 from os.path import join
@@ -98,6 +98,14 @@ if __name__ == '__main__':
         else:
             parameters = utils.read_params(params_file_som)
 
+        # plot.HParams().plot_params_results("results/mnist_3000.csv", save=False, plot=True)
+
+        # results_eval.true_to_clustering_error(out_folder, root, "results/uci_test",
+        #                                       repeats=4, param_file=params_file_som)
+
+        # results_eval.dataset_to_clustering_error(out_folder, "mnist", root, "results/mnist_3000",
+        #                                          debug, n_samples, params_file_som, coil20_unprocessed)
+
         if input_paths is None:
             train_som(root=root, dataset_path=dataset_path, parameters=parameters, device=device, use_cuda=use_cuda,
                       workers=args.workers, out_folder=out_folder, batch_size=batch_size, n_max=n_max,
@@ -107,6 +115,7 @@ if __name__ == '__main__':
                 train_som(root=root, dataset_path=train_path, parameters=parameters, device=device, use_cuda=use_cuda,
                           workers=args.workers, out_folder=out_folder, batch_size=batch_size, n_max=n_max,
                           evaluate=args.eval, summ_writer=writer, coil20_unprocessed=coil20_unprocessed)
+
 
     else:
         params_file_full = args.params_file if args.params_file is not None else "arguments/default_full_model.lhs"
