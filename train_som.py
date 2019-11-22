@@ -58,6 +58,7 @@ def train_som(root, dataset_path, parameters, device, use_cuda, workers, out_fol
             clustering_errors.append(ce)
             print('{} \t exp_id {} \tCE: {:.3f}'.format(dataset_path, param_set.Index, ce))
 
-    clustering_errors = np.array(clustering_errors)
-    plots.plot_tensorboard_x_y(parameters, 'CE', clustering_errors, summ_writer, dataset_path.split(".arff")[0])
+    if evaluate:
+        clustering_errors = np.array(clustering_errors)
+        plots.plot_tensorboard_x_y(parameters, 'CE', clustering_errors, summ_writer, dataset_path.split(".arff")[0])
 
