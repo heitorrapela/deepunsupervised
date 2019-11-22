@@ -38,7 +38,7 @@ class SOM(nn.Module):
         dists = self.weighted_distance(w)
         relevance_sum = torch.sum(self.relevance, 1)
 
-        return torch.div(relevance_sum, torch.add(torch.add(relevance_sum, dists), 1e-7))
+        return torch.div(relevance_sum, torch.add(torch.add(relevance_sum, dists), 1e-3))
 
     def weighted_distance(self, w):
         dists = self.pairwise_distance(w, self.weights)
