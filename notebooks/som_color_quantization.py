@@ -1,6 +1,7 @@
 # Author: Heitor Rapela Medeiros <hrm@cin.ufpe.br>.
 # ffmpeg -framerate 2 -pattern_type glob -i '*.jpg' -c:v libx264 -pix_fmt yuv420p out.mp4
-
+import sys
+sys.path.append("..")
 from PIL import Image
 from models.som import SOM
 import torch

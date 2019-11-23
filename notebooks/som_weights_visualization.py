@@ -1,5 +1,7 @@
 # Author: Heitor Rapela Medeiros <hrm@cin.ufpe.br>.
 # ffmpeg -framerate 2 -pattern_type glob -i '*.jpg' -c:v libx264 -pix_fmt yuv420p out.mp4
+import sys
+sys.path.append("..")
 import os
 from models.som import SOM
 from datasets.datasets import Datasets
@@ -99,12 +101,12 @@ if __name__ == '__main__':
 
     input_paths = utils.read_lines(args.input_paths) if args.input_paths is not None else None
 
-    params_file_som = args.params_file if args.params_file is not None else "arguments/default_som.lhs"
+    params_file_som = args.params_file if args.params_file is not None else "../arguments/default_som.lhs"
 
     if args.lhs:
         parameters = run_lhs_som(params_file_som, args.lhs_samples)
     else:
         parameters = utils.read_params(params_file_som)
-
-    som_weights_visualization(root=args.root, dataset_path=args.dataset,
+    
+    som_weights_visualization(root=os.path.join('..',args.root), dataset_path=args.dataset,
                               parameters=parameters, lhs_samples=args.lhs_samples)

@@ -4,7 +4,6 @@
 import numpy as np
 import pandas as pd
 from sampling.lhs import LHS
-import matplotlib.pyplot as plt
 
 
 class SOMLHS:
@@ -208,7 +207,9 @@ class FullModelLHS(SOMLHS):
 
         return self.curr_sampling
 
+
 if __name__ == '__main__':
+    import matplotlib.pyplot as plt
     lhs_samples = 250
     lhs = FullModelLHS()
     dists = [None, 'exp', 'exp_inv']
