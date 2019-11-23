@@ -14,8 +14,9 @@ from utils import utils
 from utils.plot import *
 from os.path import join
 from sampling.custom_lhs import *
-# from cuml.manifold import TSNE as cumlTSNE
 
+
+# from cuml.manifold import TSNE as cumlTSNE
 
 def weightedMSELoss(output, target, relevance):
     return torch.sum(relevance * (output - target) ** 2)
@@ -41,7 +42,7 @@ def train_full_model(root, dataset_path, parameters, device, use_cuda, out_folde
                     n_conv_layers=param_set.n_conv,
                     max_pool=True if param_set.max_pool else False,
                     hw_in=dataset.hw_in,
-                    som_input=param_set.som_in,
+                    som_input=16 * 20 * 20,
                     filters_list=param_set.filters_pow,
                     kernel_size_list=param_set.n_conv * [param_set.kernel_size],
                     stride_size_list=param_set.n_conv * [1],
@@ -54,6 +55,30 @@ def train_full_model(root, dataset_path, parameters, device, use_cuda, out_folde
                     eps_ds=param_set.eps_ds,
                     lp=param_set.lp,
                     device=device)
+
+        '''
+        print("Number of convs: ", param_set.n_conv)
+        print(model)
+
+        for name, param in model.named_parameters():
+            print('name: ', name)
+            print(type(param))
+            print('param.shape: ', param.shape)
+            print('param.requires_grad: ', param.requires_grad)
+            print('=====')
+
+
+        #print(model.state_dict())
+        for name, param in model.named_parameters():
+            print(name, ':', param.requires_grad)
+        '''
+        #   exit()
+
+        import copy
+        init_weights_fc = copy.deepcopy(model.fc1.weight.data)
+        init_weights_cnn = []
+        for i in range(param_set.n_conv):
+            init_weights_cnn.append(copy.deepcopy(model.convs[i][0].weight.data))
 
         manual_seed = param_set.seed
         random.seed(manual_seed)
@@ -68,11 +93,10 @@ def train_full_model(root, dataset_path, parameters, device, use_cuda, out_folde
         test_loader = DataLoader(dataset.test_data, shuffle=False)
 
         #  optimizer = optim.SGD(model.parameters(), lr=lr_cnn, momentum=0.5)
-        optimizer = optim.Adam(model.parameters(), lr=param_set.lr_cnn)
-        loss = nn.MSELoss(reduction='sum')
-
+        optimizer = optim.Adam(model.parameters())  # param_set.lr_cnn)
+        distance = nn.MSELoss(reduction='sum')
         model.train()
-        for epoch in range(param_set.epochs):
+        for epoch in range(100):
 
             # Self-Organize and Backpropagate
             avg_loss = 0
@@ -84,23 +108,38 @@ def train_full_model(root, dataset_path, parameters, device, use_cuda, out_folde
                 data_time.update(data_timer.toc())
                 sample, target = sample.to(device), target.to(device)
                 optimizer.zero_grad()
-                samples_high_at, weights_unique_nodes_high_at, relevances = model(sample)
-
+                x, som_out = model(sample)
+                samples_high_at, weights_unique_nodes_high_at, relevances = som_out
                 #  if only new nodes were created, the loss is zero, no need to backprobagate it
                 if len(samples_high_at) > 0:
                     weights_unique_nodes_high_at = weights_unique_nodes_high_at.view(-1, model.som_input_size)
-                    out = weightedMSELoss(samples_high_at, weights_unique_nodes_high_at, relevances)
-                    out.backward()
-                    optimizer.step()
+                    out1 = weightedMSELoss(samples_high_at, weights_unique_nodes_high_at, relevances)
+                    # out1.backward()
+                    # optimizer.step()
                 else:
-                    out = 0.0
+                    out1 = 0.0
 
-                avg_loss += out
                 s += len(sample)
 
                 batch_time.update(batch_timer.toc())
                 data_timer.toc()
 
+                plt.imshow(x.cpu().detach()[0].permute(1, 2, 0).view(28, 28), cmap='gray')
+
+                out = distance(x, sample)
+
+                # ===================backward====================
+                optimizer.zero_grad()
+                alpha = 0.2  # alpha = 0.8
+                print("Reconstruction Loss:", out)
+                print("Clustering Loss:", out1)
+                loss = (1 - alpha) * out + alpha * out1
+                print("Total Loss: ", loss)
+                loss.backward()
+                optimizer.step()
+                avg_loss += out
+
+                '''
                 if debug:
                     cluster_result, predict_labels, true_labels = model.cluster(test_loader)
                     print("Homogeneity: %0.3f" % metrics.cluster.homogeneity_score(true_labels, predict_labels))
@@ -126,6 +165,15 @@ def train_full_model(root, dataset_path, parameters, device, use_cuda, out_folde
                           '{data_time.val:.4f} ({data_time.avg:.4f})\t'.format(
                         batch_idx, len(train_loader), batch_time=batch_time,
                         data_time=data_time))
+                '''
+                '''
+                print("---------------")
+                for i in range(param_set.n_conv):
+                    print("Conv ", i, " Initial Sum of Weights: ", init_weights_cnn[i].sum().data, "  During Training Sum of Weights: ", model.convs[i][0].weight.sum().data)
+                print("Full Connected Initial Sum of Weights: ", init_weights_fc.sum().data, "  During Training Sum of Weights: ", model.fc1.weight.data.sum().data)
+                print("---------------")
+                #exit(0)
+                '''
 
             samples = None
             t = None
@@ -157,6 +205,7 @@ def train_full_model(root, dataset_path, parameters, device, use_cuda, out_folde
             summ_writer.add_scalar('Loss/train', avg_loss / s, epoch)
 
         #  Need to change train loader to test loader...
+        '''
         model.eval()
 
         print("Train Finished", flush=True)
@@ -183,4 +232,4 @@ def train_full_model(root, dataset_path, parameters, device, use_cuda, out_folde
         if debug:
             som_plotter.plot_hold()
             # tsne_plotter.plot_hold()
-
+        '''

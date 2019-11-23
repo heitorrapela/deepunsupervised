@@ -6,6 +6,7 @@ import numpy as np
 from models.som import SOM
 
 
+
 class Net(nn.Module):
     def __init__(self, d_in=1, n_conv_layers=3, batch_norm=False, max_pool=True, hw_in=28, som_input=2, filters_list=[20, 50],
                  kernel_size_list=[5, 5], stride_size_list=[1, 1], padding_size_list=[0, 0], max_pool2d_size=2,
@@ -50,7 +51,7 @@ class Net(nn.Module):
 
         self.convs = nn.Sequential(*self.convs)
         self.fc1 = nn.Linear(self.hw_out*self.hw_out*self.filters_list[len(self.convs)], self.som_input_size).to(self.device)
-        self.som = SOM(input_dim=self.som_input_size,
+        self.som = SOM(input_dim=16*20*20,
                        n_max=n_max,
                        eb=eb,
                        at=at,
@@ -61,6 +62,19 @@ class Net(nn.Module):
 
         self.som = self.som.to(self.device)
 
+        self.encoder = nn.Sequential(
+            nn.Conv2d(1, 32, kernel_size=5),
+            nn.ReLU(True),
+            nn.Conv2d(32, 64, kernel_size=5),
+            nn.ReLU(True))
+
+        self.decoder = nn.Sequential(
+            nn.ConvTranspose2d(64, 32, kernel_size=5),
+            nn.ReLU(True),
+            nn.ConvTranspose2d(32, 1, kernel_size=5),
+            nn.ReLU(True),
+            nn.Sigmoid())
+
     def cnn_extract_features(self, x):
         x = self.convs(x)
         x = x.view(-1, self.hw_out*self.hw_out*self.filters_list[len(self.convs)])
@@ -68,8 +82,12 @@ class Net(nn.Module):
         x = torch.tanh(x)
         return x
 
+
     def forward(self, x):
-        return self.som(self.cnn_extract_features(x))
+        y = self.encoder(x)
+        x = y
+        x = self.decoder(x)
+        return x, self.som(torch.tanh(y).view(-1,16*20*20))#self.som(self.cnn_extract_features(x))
     
     def cluster(self, dataloader):
         clustering = pd.DataFrame(columns=['sample_ind', 'cluster'])
