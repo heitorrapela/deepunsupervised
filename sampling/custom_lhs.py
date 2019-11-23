@@ -1,8 +1,10 @@
 # Author: Pedro Braga <phmb4@cin.ufpe.br>.
+# Author: Heitor Rapela Medeiros <hrm@cin.ufpe.br>.
 
 import numpy as np
 import pandas as pd
 from sampling.lhs import LHS
+import matplotlib.pyplot as plt
 
 
 class SOMLHS:
@@ -49,21 +51,68 @@ class SOMLHS:
         self.params_names = ['n_max', 'at', 'eb', 'ds_beta', 'eps_ds', 'lp', 'epochs', 'seed']
 
         self.criterion = criterion
-
         self.lhs = LHS(self.limits, self.criterion)
 
-    def __call__(self, samples):
+    def __call__(self, samples, **kwargs):
         self.curr_sampling = self.lhs(samples)
         self.curr_sampling = pd.DataFrame(self.curr_sampling, columns=self.params_names).astype('float32')
 
-        self.curr_sampling['n_max'] = self.curr_sampling['n_max'].round().astype('int32')
-        self.curr_sampling['epochs'] = self.curr_sampling['epochs'].round().astype('int32')
-        self.curr_sampling['seed'] = self.curr_sampling['seed'].round().astype('int32')
+        if kwargs.get('custom_dist_n_max') is None or kwargs.get('custom_dist_n_max') == 'default':
+            self.curr_sampling['n_max'] = self.curr_sampling['n_max'].round().astype('int32')
+        else:
+            self.curr_sampling['n_max'] = self.custom_distribution(
+                self.n_max, samples, param=kwargs.get('custom_dist_n_max')).round().astype('int32')
+
+        if kwargs.get('custom_dist_at') == 'exp' or kwargs.get('custom_dist_at') == 'exp_inv':
+            self.curr_sampling['at'] = self.custom_distribution(self.at, samples,
+                                                                param=kwargs.get('custom_dist_at'))
+
+        if kwargs.get('custom_dist_eb') == 'exp' or kwargs.get('custom_dist_eb') == 'exp_inv':
+            self.curr_sampling['eb'] = self.custom_distribution(self.eb, samples,
+                                                                param=kwargs.get('custom_dist_eb'))
+
+        if kwargs.get('custom_dist_ds_beta') == 'exp' or kwargs.get('custom_dist_ds_beta') == 'exp_inv':
+            self.curr_sampling['ds_beta'] = self.custom_distribution(self.ds_beta, samples,
+                                                                     param=kwargs.get('custom_dist_ds_beta'))
+
+        if kwargs.get('custom_dist_eps_ds') == 'exp' or kwargs.get('custom_dist_eps_ds') == 'exp_inv':
+            self.curr_sampling['eps_ds'] = self.custom_distribution(self.eps_ds, samples,
+                                                                    param=kwargs.get('custom_dist_eps_ds'))
+
+        if kwargs.get('custom_dist_lp') == 'exp' or kwargs.get('custom_dist_lp') == 'exp_inv':
+            self.curr_sampling['lp'] = self.custom_distribution(self.lp, samples,
+                                                                param=kwargs.get('custom_dist_lp'))
+
+        if kwargs.get('custom_dist_epochs') is None or kwargs.get('custom_dist_epochs') == 'default':
+            self.curr_sampling['epochs'] = self.curr_sampling['epochs'].round().astype('int32')
+        else:
+            self.curr_sampling['epochs'] = self.custom_distribution(
+                self.epochs, samples, param=kwargs.get('custom_dist_epochs')).round().astype('int32')
+
+        if kwargs.get('custom_dist_seed') is None or kwargs.get('custom_dist_seed') == 'default':
+            self.curr_sampling['seed'] = self.curr_sampling['seed'].round().astype('int32')
+        else:
+            self.curr_sampling['seed'] = self.custom_distribution(
+                self.seed, samples, param=kwargs.get('custom_dist_seed')).round().astype('int32')
 
         return self.curr_sampling
 
     def write_params_file(self, filename):
         self.curr_sampling.to_csv(filename, sep=',', index=False, header=True)
+
+    def custom_distribution(self, limits_range, lhs_samples_n, param='default'):
+
+        if param is None or param is 'default':
+            lhs_temp = LHS(limits_range, self.criterion)
+            return lhs_temp(lhs_samples_n)
+        elif param == 'exp':
+            limits_tmp = np.log10(np.array([limits_range]))
+            lhs_temp = LHS(limits_tmp, self.criterion)
+            return np.power(10, lhs_temp(lhs_samples_n))
+        elif param == 'exp_inv':
+            limits_tmp = np.log10(np.ones(2) - np.array([limits_range]) + np.finfo(float).eps)
+            lhs_temp = LHS(limits_tmp, self.criterion)
+            return 1 - np.power(10, lhs_temp(lhs_samples_n))
 
 
 class FullModelLHS(SOMLHS):
@@ -111,17 +160,86 @@ class FullModelLHS(SOMLHS):
 
         self.lhs = LHS(self.limits, self.criterion)
 
-    def __call__(self, samples):
-        super(FullModelLHS, self).__call__(samples)
+    def __call__(self, samples, **kwargs):
+        super(FullModelLHS, self).__call__(samples, **kwargs)
 
-        self.curr_sampling['n_conv'] = self.curr_sampling['n_conv'].round().astype('int32')
-        self.curr_sampling['som_in'] = self.curr_sampling['som_in'].round().astype('int32')
-        self.curr_sampling['max_pool'] = self.curr_sampling['max_pool'].round().astype('int32')
-        self.curr_sampling['max_pool2d_size'] = self.curr_sampling['max_pool2d_size'].round().astype('int32')
-        self.curr_sampling['filters_pow'] = self.curr_sampling['filters_pow'].round().astype('int32')
-        self.curr_sampling['kernel_size'] = self.curr_sampling['kernel_size'].round().astype('int32')
+        if kwargs.get('custom_dist_lr_cnn') == 'exp' or kwargs.get('custom_dist_lr_cnn') == 'exp_inv':
+            self.curr_sampling['lr_cnn'] = self.custom_distribution(self.lr_cnn, samples,
+                                                                    param=kwargs.get('custom_dist_lr_cnn'))
+
+        if kwargs.get('custom_dist_n_conv') is None or kwargs.get('custom_dist_n_conv') == 'default':
+            self.curr_sampling['n_conv'] = self.curr_sampling['n_conv'].round().astype('int32')
+        else:
+            self.curr_sampling['n_conv'] = self.custom_distribution(
+                self.n_conv, samples, param=kwargs.get('custom_dist_n_conv')).round().astype('int32')
+
+        if kwargs.get('custom_dist_som_in') is None or kwargs.get('custom_dist_som_in') == 'default':
+            self.curr_sampling['som_in'] = self.curr_sampling['som_in'].round().astype('int32')
+        else:
+            self.curr_sampling['som_in'] = self.custom_distribution(
+                self.som_in, samples, param=kwargs.get('custom_dist_som_in')).round().astype('int32')
+
+        if kwargs.get('custom_dist_max_pool') is None or kwargs.get('custom_dist_max_pool') == 'default':
+            self.curr_sampling['max_pool'] = self.curr_sampling['max_pool'].round().astype('int32')
+        else:
+            self.curr_sampling['max_pool'] = self.custom_distribution(
+                self.max_pool, samples, param=kwargs.get('custom_dist_max_pool')).round().astype('int32')
+
+        if kwargs.get('custom_dist_max_pool2d_size') is None or kwargs.get('custom_dist_max_pool2d_size') == 'default':
+            self.curr_sampling['max_pool2d_size'] = self.curr_sampling['max_pool2d_size'].round().astype('int32')
+        else:
+            self.curr_sampling['max_pool2d_size'] = self.custom_distribution(
+                self.max_pool2d_size, samples, param=kwargs.get('custom_dist_max_pool2d_size')).round().astype('int32')
+
+        if kwargs.get('custom_dist_filters_pow') is None or kwargs.get('custom_dist_filters_pow') == 'default':
+            self.curr_sampling['filters_pow'] = self.curr_sampling['filters_pow'].round().astype('int32')
+        else:
+            self.curr_sampling['filters_pow'] = self.custom_distribution(
+                self.filters_pow, samples, param=kwargs.get('custom_dist_filters_pow')).round().astype('int32')
+
+        if kwargs.get('custom_dist_kernel_size') is None or kwargs.get('custom_dist_kernel_size') == 'default':
+            self.curr_sampling['kernel_size'] = self.curr_sampling['kernel_size'].round().astype('int32')
+        else:
+            self.curr_sampling['kernel_size'] = self.custom_distribution(
+                self.kernel_size, samples, param=kwargs.get('custom_dist_kernel_size')).round().astype('int32')
 
         # it maps the sampled values 1, 2, and 3 to the kernel_size values 3, 5 and 7, respectively
         self.curr_sampling['kernel_size'] = self.curr_sampling['kernel_size'] * 2 + 1
 
         return self.curr_sampling
+
+if __name__ == '__main__':
+    lhs_samples = 250
+    lhs = FullModelLHS()
+    dists = [None, 'exp', 'exp_inv']
+
+    params_names = ['n_max', 'at', 'eb', 'ds_beta', 'eps_ds', 'lp', 'epochs', 'seed', 'lr_cnn', 'n_conv', 'som_in',
+                    'max_pool', 'max_pool2d_size', 'filters_pow', 'kernel_size']
+
+    # for i in range(len(params_names)):
+    for dist in dists:
+        sampling = lhs(lhs_samples, custom_dist_n_max=dist,
+                       custom_dist_at=dist,
+                       custom_dist_eb=dist,
+                       custom_dist_ds_beta=dist,
+                       custom_dist_eps_ds=dist,
+                       custom_dist_lp=dist,
+                       custom_dist_epochs=dist,
+                       custom_dist_seed=dist,
+                       custom_dist_lr_cnn=dist,
+                       custom_dist_n_conv=dist,
+                       custom_dist_som_in=dist,
+                       custom_dist_max_pool=dist,
+                       custom_dist_max_pool2d_size=dist,
+                       custom_dist_filters_pow=dist,
+                       custom_dist_kernel_size=dist)
+
+        sampling = np.asarray(sampling)
+
+        for i in range(len(params_names)):
+            print(sampling[:, i].min(), sampling[:, i].max())
+            plt.plot(sampling[:, i], np.arange(lhs_samples), '.')
+            plt.title('LHS ' + str(dist) + ' ' + params_names[i])
+            plt.xlim(sampling[:, i].min(), sampling[:, i].max())
+            plt.pause(0.5)
+            plt.clf()
