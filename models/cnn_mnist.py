@@ -9,7 +9,7 @@ from models.som import SOM
 class Net(nn.Module):
     def __init__(self, d_in=1, n_conv_layers=3, batch_norm=False, max_pool=True, hw_in=28, som_input=2, filters_list=[20, 50],
                  kernel_size_list=[5, 5], stride_size_list=[1, 1], padding_size_list=[0, 0], max_pool2d_size=2,
-                 n_max=20, at=0.985, eb=0.1, ds_beta=0.5, eps_ds=1.,  device='cpu'):
+                 n_max=20, at=0.985, eb=0.1, ds_beta=0.5, eps_ds=1., lp=0.05, device='cpu'):
         super(Net, self).__init__(),
 
         self.som_input_size = som_input
@@ -49,7 +49,15 @@ class Net(nn.Module):
                 break
         
         self.fc1 = nn.Linear(self.hw_out*self.hw_out*self.filters_list[len(self.convs)], self.som_input_size).to(self.device)
-        self.som = SOM(input_dim=self.som_input_size, n_max=n_max, eb=eb, at=at, ds_beta=ds_beta, eps_ds=eps_ds, device=self.device)
+        self.som = SOM(input_dim=self.som_input_size,
+                       n_max=n_max,
+                       eb=eb,
+                       at=at,
+                       ds_beta=ds_beta,
+                       eps_ds=eps_ds,
+                       lp=lp,
+                       device=self.device)
+
         self.som = self.som.to(self.device)
 
     def cnn_extract_features(self, x):

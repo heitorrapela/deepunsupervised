@@ -26,6 +26,7 @@ def train_som(root, dataset_path, parameters, device, use_cuda, workers, out_fol
                   ds_beta=param_set.ds_beta,
                   eb=param_set.eb,
                   eps_ds=param_set.eps_ds,
+                  lp=param_set.lp,
                   device=device)
         som_epochs = param_set.epochs
 

@@ -19,6 +19,7 @@ def run_lhs_som(filename, lhs_samples=1):
                  eb=[0.0001, 0.01],
                  ds_beta=[0.001, 0.5],
                  eps_ds=[0.01, 0.1],
+                 lp=[0.05, 0.5],
                  epochs=[1, 3],
                  seed=[1, 200000])
 
@@ -41,6 +42,7 @@ def run_lhs_full_model(filename, lhs_samples=1):
                        eb=[0.0001, 0.005],
                        ds_beta=[0.001, 0.5],
                        eps_ds=[0.01, 0.1],
+                       lp=[0.05, 0.5],
                        epochs=[70, 200],
                        seed=[1, 200000])
 

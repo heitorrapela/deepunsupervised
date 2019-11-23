@@ -8,7 +8,7 @@ import re
 
 class SOM(nn.Module):
 
-    def __init__(self, input_dim, n_max=20, eb=0.1, at=0.985, ds_beta=0.5, eps_ds=1., device='cpu'):
+    def __init__(self, input_dim, n_max=20, eb=0.1, at=0.985, ds_beta=0.5, eps_ds=1., lp=0.1, device='cpu'):
         '''
         :param input_dim:
         :param n_max:
@@ -16,23 +16,27 @@ class SOM(nn.Module):
         :param ds_beta:
         :param eb:
         :param eps_ds:
+        :param lp:
         :param use_cuda:
         '''
 
         super(SOM, self).__init__()
         self.input_size = input_dim
+
         self.n_max = n_max
         self.lr = eb
         self.at = at
-
         self.ds_beta = ds_beta
         self.eps_ds = eps_ds
+        self.lp = lp
+
         self.device = torch.device(device)
 
         self.node_control = nn.Parameter(torch.zeros(n_max, device=self.device), requires_grad=False)
         self.weights = nn.Parameter(torch.zeros(n_max, input_dim, device=self.device), requires_grad=False)
         self.moving_avg = nn.Parameter(torch.zeros(n_max, input_dim, device=self.device), requires_grad=False)
         self.relevance = nn.Parameter(torch.ones(n_max, input_dim, device=self.device), requires_grad=False)
+        self.life = nn.Parameter(torch.ones(n_max, device=self.device), requires_grad=False)
 
     def activation(self, w):
         dists = self.weighted_distance(w)
@@ -63,7 +67,8 @@ class SOM(nn.Module):
 
     def add_node(self, new_samples):
         # number of available nodes in the map
-        n_available = torch.tensor(self.node_control[self.node_control == 0].size(0))
+        available_idx = (self.node_control == 0).nonzero()
+        n_available = torch.tensor(available_idx.size(0))
 
         # number of nodes to be inserted in the map
         n_new = torch.tensor(new_samples.size(0))
@@ -77,12 +82,11 @@ class SOM(nn.Module):
         create_idx = torch.arange(start=min_idx, end=max_idx, step=1)
         new_nodes = new_samples[create_idx]
 
-        available_idx = (self.node_control == 0).nonzero()
-
         n_new_nodes = new_nodes.size(0)
         new_nodes_idx = available_idx[:n_new_nodes].t()
 
         self.node_control[new_nodes_idx] = 1.
+        self.life[new_nodes_idx] = 1.
         self.weights[new_nodes_idx] = new_nodes
         self.relevance[new_nodes_idx] = nn.Parameter(torch.ones(n_new_nodes, self.input_size, device=self.device),
                                                      requires_grad=False)
@@ -90,7 +94,7 @@ class SOM(nn.Module):
         self.moving_avg[new_nodes_idx] = nn.Parameter(torch.zeros(n_new_nodes, self.input_size, device=self.device),
                                                       requires_grad=False)
 
-        return new_nodes_idx
+        return new_nodes_idx.squeeze(-1)
 
     def update_node(self, w, index):
         distance = torch.abs(torch.sub(w, self.weights[index]))
@@ -131,8 +135,9 @@ class SOM(nn.Module):
         '''
         act_max, indexes_max = self.get_winners(input)
 
-        bool_high_at = act_max >= self.at
+        self.life -= self.lp
 
+        bool_high_at = act_max >= self.at
         samples_high_at = input[bool_high_at]
         nodes_high_at = indexes_max[bool_high_at]
 
@@ -143,6 +148,7 @@ class SOM(nn.Module):
             unique_nodes_high_at, updatable_samples_hight_at = self.unique_node_diff_vectorized(nodes_high_at,
                                                                                                 samples_high_at)
 
+            self.life[unique_nodes_high_at] = 1.
             with torch.no_grad():
                 self.update_node(updatable_samples_hight_at, unique_nodes_high_at)
 
@@ -157,6 +163,8 @@ class SOM(nn.Module):
             with torch.no_grad():
                 self.add_node(updatable_samples_low_at)
 
+        self.remove_nodes()
+
         return updatable_samples_hight_at, self.weights[unique_nodes_high_at], self.relevance[unique_nodes_high_at]
 
     def unique_node_diff_vectorized(self, nodes, samples):
@@ -168,6 +176,10 @@ class SOM(nn.Module):
         updatable_samples = torch.div(updatable_samples, unique_nodes_counts.float())
 
         return unique_nodes.t().squeeze(-1), updatable_samples.t()
+
+    def remove_nodes(self):
+        dead_nodes = self.life <= 0.
+        self.node_control[dead_nodes] = 0.
 
     def cluster(self, dataloader):
         clustering = pd.DataFrame(columns=['sample_ind', 'cluster'])
