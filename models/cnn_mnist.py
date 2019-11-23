@@ -47,7 +47,8 @@ class Net(nn.Module):
             else:
                 print("Warning the size of the output is too small!")
                 break
-        
+
+        self.convs = nn.Sequential(*self.convs)
         self.fc1 = nn.Linear(self.hw_out*self.hw_out*self.filters_list[len(self.convs)], self.som_input_size).to(self.device)
         self.som = SOM(input_dim=self.som_input_size,
                        n_max=n_max,
@@ -61,8 +62,7 @@ class Net(nn.Module):
         self.som = self.som.to(self.device)
 
     def cnn_extract_features(self, x):
-        for i in range(len(self.convs)):
-            x = self.convs[i](x)
+        x = self.convs(x)
         x = x.view(-1, self.hw_out*self.hw_out*self.filters_list[len(self.convs)])
         x = self.fc1(x)
         x = torch.tanh(x)
