@@ -87,8 +87,12 @@ class Net(nn.Module):
         #print(out.shape)
         out = F.relu(self.fc1(out))
         out1 = F.relu(self.fc2(out))
+        #out1 = F.sigmoid(out1)
+
         out = F.log_softmax(self.fc3(out1))
-        return out, self.som(out1), out1#self.som(self.cnn_extract_features(out1))
+        #out1 = F.sigmoid(out1)
+
+        return out, self.som(out1), out1#self.som(F.log_softmax(out1)), out1#self.som(self.cnn_extract_features(out1))
         #return
     
     def cluster(self, dataloader):

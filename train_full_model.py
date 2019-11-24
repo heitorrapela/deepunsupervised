@@ -97,23 +97,21 @@ def train_full_model(root, dataset_path, parameters, device, use_cuda, out_folde
 
         #optimizer = optim.SGD(model.parameters(), lr=0.0275, momentum=0.9)
         optimizer = optim.Adam(model.parameters())
-        scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=1, gamma=0.7)
+        #scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=1, gamma=0.7)
         #loss = nn.MSELoss(reduction='sum')
-        optimizer = optim.Adadelta(model.parameters(), lr=1.0)
+        #optimizer = optim.Adadelta(model.parameters(), lr=1.0)
 
-        epochs = 100
+        epochs = 18
         model.train()
         for epoch in range(epochs):
-            if(epoch < 18):
-                model.train()
-            else:
-                model.eval()
+            model.train()
             # Self-Organize and Backpropagate
             avg_loss = 0
             s = 0
             data_timer.tic()
             batch_timer.tic()
             for batch_idx, (sample, target) in enumerate(train_loader):
+
                 model.train()
                 #for i in range(2):
                 #    model(sample)
@@ -153,7 +151,7 @@ def train_full_model(root, dataset_path, parameters, device, use_cuda, out_folde
                 '''
                 model.eval()
                 if debug:
-                    cluster_result, predict_labels, true_labels = model.cluster(train_loader)
+                    cluster_result, predict_labels, true_labels = model.cluster(test_loader)
                     print("Homogeneity: %0.3f" % metrics.cluster.homogeneity_score(true_labels, predict_labels))
                     print("Completeness: %0.3f" % metrics.cluster.completeness_score(true_labels, predict_labels))
                     print("V-measure: %0.3f" % metrics.cluster.v_measure_score(true_labels, predict_labels))
@@ -193,7 +191,7 @@ def train_full_model(root, dataset_path, parameters, device, use_cuda, out_folde
             model.eval()
             #  Calculate metrics or plot without change SOM map
             if debug:
-                for batch_idx, (inputs, targets) in enumerate(train_loader):
+                for batch_idx, (inputs, targets) in enumerate(test_loader):
                     inputs, targets = inputs.to(device), targets.to(device)
                     x, _x1, outputs = model(inputs)
 
@@ -205,7 +203,7 @@ def train_full_model(root, dataset_path, parameters, device, use_cuda, out_folde
                         t = np.append(t, targets.cpu().detach().numpy(), axis=0)
 
                 centers, relevances, ma = model.som.get_prototypes()
-                som_plotter.plot_data(samples, t, centers.cpu(), relevances.cpu() , epoch=epoch, tot_epoch=epochs)
+                som_plotter.plot_data(samples, t, centers.cpu(), relevances.cpu()*0.1 , epoch=epoch, tot_epoch=epochs)
                 summ_writer.add_scalar('Nodes', len(centers), epoch)
 
                 # for center in centers:

@@ -122,12 +122,15 @@ class Plotter:
                                                      xerr=relevances[:, self.init_dim_x],
                                                      yerr=relevances[:, self.init_dim_y],
                                                      alpha=0.5, fmt='o', c='k')
+        plt.waitforbuttonpress(timeout=pause_time)
+        '''
         #epoch = epoch, tot_epoch = epochs
         if(epoch < tot_epoch-1):
             plt.waitforbuttonpress(timeout=pause_time)
         else:
             print("AEWEWEWEE")
             plt.show(block=True)
+        '''
     def plot_hold(self, time=10000):
         plt.pause(time)
 
