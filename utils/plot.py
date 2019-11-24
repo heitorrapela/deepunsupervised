@@ -52,7 +52,8 @@ class Plotter:
 
         self.fig.canvas.draw_idle()
 
-    def plot_data(self, data, target, centers=None, relevances=None, pause_time=0.01, print_labels=False):
+    def plot_data(self, data, target, centers=None, relevances=None, pause_time=0.01, print_labels=False,
+                  epoch=0, tot_epoch=20):
         self.input_dim = data.shape[-1]
 
         if self.fig is None:
@@ -121,8 +122,12 @@ class Plotter:
                                                      xerr=relevances[:, self.init_dim_x],
                                                      yerr=relevances[:, self.init_dim_y],
                                                      alpha=0.5, fmt='o', c='k')
-        plt.waitforbuttonpress(timeout=pause_time)
-
+        #epoch = epoch, tot_epoch = epochs
+        if(epoch < tot_epoch-1):
+            plt.waitforbuttonpress(timeout=pause_time)
+        else:
+            print("AEWEWEWEE")
+            plt.show(block=True)
     def plot_hold(self, time=10000):
         plt.pause(time)
 

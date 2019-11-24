@@ -5,6 +5,9 @@ import pandas as pd
 import numpy as np
 from models.som import SOM
 
+'''LeNet in PyTorch.'''
+import torch.nn as nn
+import torch.nn.functional as F
 
 class Net(nn.Module):
     def __init__(self, d_in=1, n_conv_layers=3, batch_norm=False, max_pool=True, hw_in=28, som_input=2, filters_list=[20, 50],
@@ -61,6 +64,13 @@ class Net(nn.Module):
 
         self.som = self.som.to(self.device)
 
+        self.conv1 = nn.Conv2d(1, 6, 5)
+        self.conv2 = nn.Conv2d(6, 16, 5)
+        self.fc1   = nn.Linear(256, 120)
+        self.fc2   = nn.Linear(120, 84)
+        self.fc3   = nn.Linear(84, 10)
+
+
     def cnn_extract_features(self, x):
         x = self.convs(x)
         x = x.view(-1, self.hw_out*self.hw_out*self.filters_list[len(self.convs)])
@@ -69,7 +79,17 @@ class Net(nn.Module):
         return x
 
     def forward(self, x):
-        return self.som(self.cnn_extract_features(x))
+        out = F.relu(self.conv1(x))
+        out = F.max_pool2d(out, 2)
+        out = F.relu(self.conv2(out))
+        out = F.max_pool2d(out, 2)
+        out = out.view(out.size(0), -1)
+        #print(out.shape)
+        out = F.relu(self.fc1(out))
+        out1 = F.relu(self.fc2(out))
+        out = F.log_softmax(self.fc3(out1))
+        return out, self.som(out1), out1#self.som(self.cnn_extract_features(out1))
+        #return
     
     def cluster(self, dataloader):
         clustering = pd.DataFrame(columns=['sample_ind', 'cluster'])
@@ -78,7 +98,9 @@ class Net(nn.Module):
 
         for batch_idx, (samples, targets) in enumerate(dataloader):
             samples, targets = samples.to(self.device), targets.to(self.device)
-            outputs = self.cnn_extract_features(samples)
+            x, _x1, outputs = self.forward(samples)
+
+            #outputs = self.cnn_extract_features(samples)
 
             _, bmu_indexes = self.som.get_winners(outputs.to(self.device))
 

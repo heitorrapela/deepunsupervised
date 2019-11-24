@@ -16,6 +16,7 @@ from os.path import join
 from sampling.custom_lhs import *
 # from cuml.manifold import TSNE as cumlTSNE
 
+import torch.nn.functional as F
 
 def weightedMSELoss(output, target, relevance):
     return torch.sum(relevance * (output - target) ** 2)
@@ -41,7 +42,7 @@ def train_full_model(root, dataset_path, parameters, device, use_cuda, out_folde
                     n_conv_layers=param_set.n_conv,
                     max_pool=True if param_set.max_pool else False,
                     hw_in=dataset.hw_in,
-                    som_input=param_set.som_in,
+                    som_input=84,
                     filters_list=param_set.filters_pow,
                     kernel_size_list=param_set.n_conv * [param_set.kernel_size],
                     stride_size_list=param_set.n_conv * [1],
@@ -55,6 +56,33 @@ def train_full_model(root, dataset_path, parameters, device, use_cuda, out_folde
                     lp=param_set.lp,
                     device=device)
 
+
+        '''
+        print("Number of convs: ", param_set.n_conv)
+        print(model)
+
+
+        for name, param in model.named_parameters():
+            print('name: ', name)
+            print(type(param))
+            print('param.shape: ', param.shape)
+            print('param.requires_grad: ', param.requires_grad)
+            print('=====')
+        '''
+        '''
+        #print(model.state_dict())
+        for name, param in model.named_parameters():
+            print(name, ':', param.requires_grad)
+        
+
+
+        import copy
+        init_weights_fc = copy.deepcopy(model.fc1.weight.data)
+        init_weights_cnn = []
+        for i in range(param_set.n_conv):
+            init_weights_cnn.append(copy.deepcopy(model.convs[i][0].weight.data))
+        '''
+
         manual_seed = param_set.seed
         random.seed(manual_seed)
         torch.manual_seed(manual_seed)
@@ -67,42 +95,65 @@ def train_full_model(root, dataset_path, parameters, device, use_cuda, out_folde
         train_loader = DataLoader(dataset.train_data, batch_size=batch_size, shuffle=True)
         test_loader = DataLoader(dataset.test_data, shuffle=False)
 
-        #  optimizer = optim.SGD(model.parameters(), lr=lr_cnn, momentum=0.5)
-        optimizer = optim.Adam(model.parameters(), lr=param_set.lr_cnn)
-        loss = nn.MSELoss(reduction='sum')
+        #optimizer = optim.SGD(model.parameters(), lr=0.0275, momentum=0.9)
+        optimizer = optim.Adam(model.parameters())
+        scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=1, gamma=0.7)
+        #loss = nn.MSELoss(reduction='sum')
+        optimizer = optim.Adadelta(model.parameters(), lr=1.0)
 
+        epochs = 100
         model.train()
-        for epoch in range(param_set.epochs):
-
+        for epoch in range(epochs):
+            if(epoch < 18):
+                model.train()
+            else:
+                model.eval()
             # Self-Organize and Backpropagate
             avg_loss = 0
             s = 0
             data_timer.tic()
             batch_timer.tic()
             for batch_idx, (sample, target) in enumerate(train_loader):
-
+                model.train()
+                #for i in range(2):
+                #    model(sample)
                 data_time.update(data_timer.toc())
                 sample, target = sample.to(device), target.to(device)
                 optimizer.zero_grad()
-                samples_high_at, weights_unique_nodes_high_at, relevances = model(sample)
+                #print(sample.shape)
+                x, somm, _ = model(sample)
+                samples_high_at, weights_unique_nodes_high_at, relevances = somm
 
                 #  if only new nodes were created, the loss is zero, no need to backprobagate it
-                if len(samples_high_at) > 0:
-                    weights_unique_nodes_high_at = weights_unique_nodes_high_at.view(-1, model.som_input_size)
-                    out = weightedMSELoss(samples_high_at, weights_unique_nodes_high_at, relevances)
-                    out.backward()
-                    optimizer.step()
-                else:
-                    out = 0.0
+                #if len(samples_high_at) > 0:
+                    #weights_unique_nodes_high_at = weights_unique_nodes_high_at.view(-1, model.som_input_size)
+                    #out = weightedMSELoss(samples_high_at, weights_unique_nodes_high_at, relevances)
+                    #out.backward()
+                    #optimizer.step()
+                #else:
+                #    out = 0.0
 
-                avg_loss += out
+
+                #print(x,x.shape)
+                #print(target,target.shape)
+                #input()
+
+
+                loss = F.nll_loss(x, target)
+                loss.backward()
+                optimizer.step()
+                out = loss
+                #scheduler.step()
+                #avg_loss += out
                 s += len(sample)
 
                 batch_time.update(batch_timer.toc())
                 data_timer.toc()
 
+                '''
+                model.eval()
                 if debug:
-                    cluster_result, predict_labels, true_labels = model.cluster(test_loader)
+                    cluster_result, predict_labels, true_labels = model.cluster(train_loader)
                     print("Homogeneity: %0.3f" % metrics.cluster.homogeneity_score(true_labels, predict_labels))
                     print("Completeness: %0.3f" % metrics.cluster.completeness_score(true_labels, predict_labels))
                     print("V-measure: %0.3f" % metrics.cluster.v_measure_score(true_labels, predict_labels))
@@ -126,14 +177,25 @@ def train_full_model(root, dataset_path, parameters, device, use_cuda, out_folde
                           '{data_time.val:.4f} ({data_time.avg:.4f})\t'.format(
                         batch_idx, len(train_loader), batch_time=batch_time,
                         data_time=data_time))
+                '''
+
+                '''
+                print("---------------")
+                for i in range(param_set.n_conv):
+                    print("Conv ", i, " Initial Sum of Weights: ", init_weights_cnn[i].sum().data, "  During Training Sum of Weights: ", model.convs[i][0].weight.sum().data)
+                print("Full Connected Initial Sum of Weights: ", init_weights_fc.sum().data, "  During Training Sum of Weights: ", model.fc1.weight.data.sum().data)
+                print("---------------")
+                #exit(0)
+                '''
 
             samples = None
             t = None
+            model.eval()
             #  Calculate metrics or plot without change SOM map
             if debug:
                 for batch_idx, (inputs, targets) in enumerate(train_loader):
                     inputs, targets = inputs.to(device), targets.to(device)
-                    outputs = model.cnn_extract_features(inputs)
+                    x, _x1, outputs = model(inputs)
 
                     if samples is None:
                         samples = outputs.cpu().detach().numpy()
@@ -143,7 +205,7 @@ def train_full_model(root, dataset_path, parameters, device, use_cuda, out_folde
                         t = np.append(t, targets.cpu().detach().numpy(), axis=0)
 
                 centers, relevances, ma = model.som.get_prototypes()
-                som_plotter.plot_data(samples, t, centers.cpu(), relevances.cpu() * 0.1)
+                som_plotter.plot_data(samples, t, centers.cpu(), relevances.cpu() , epoch=epoch, tot_epoch=epochs)
                 summ_writer.add_scalar('Nodes', len(centers), epoch)
 
                 # for center in centers:
@@ -153,8 +215,9 @@ def train_full_model(root, dataset_path, parameters, device, use_cuda, out_folde
                 # embedding = tsne.fit_transform(samples)
                 # tsne_plotter.plot_data(embedding, t, None, None)
 
-            print("Epoch: %d avg_loss: %.6f\n" % (epoch, avg_loss / s))
-            summ_writer.add_scalar('Loss/train', avg_loss / s, epoch)
+            print("Epoch: %d avg_loss: %.6f\n" % (epoch,  loss))
+            #summ_writer.add_scalar('Loss/train', avg_loss / s, epoch)
+
 
         #  Need to change train loader to test loader...
         model.eval()
