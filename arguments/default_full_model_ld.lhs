@@ -1,4 +1,4 @@
-lr_cnn,n_conv,som_in,max_pool,max_pool2d_size,filters_pow,kernel_size,n_max,at,eb,ds_beta,eps_ds,lp,epochs,seed
+lr_cnn,n_conv,som_in,max_pool,max_pool2d_size,filters_pow,kernel_size,n_max,at,eb,ds_beta,eps_ds,ld,epochs,seed
 8.326e-05,2,40,0,4,4,3,42,0.935526,0.0037946,0.279442,0.01162,0.3209,135,110000
 0.00079606,4,62,1,4,5,5,125,0.990358,0.0034026,0.10579,0.0721,0.4055,111,68401
 0.00014662,4,32,0,3,3,7,146,0.859238,0.0040494,0.393214,0.06886,0.2759,111,100400

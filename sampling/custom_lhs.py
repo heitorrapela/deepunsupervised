@@ -8,7 +8,7 @@ from sampling.lhs import LHS
 
 class SOMLHS:
 
-    def __init__(self, n_max=None, at=None, eb=None, ds_beta=None, eps_ds=None, lp=None,
+    def __init__(self, n_max=None, at=None, eb=None, ds_beta=None, eps_ds=None, ld=None,
                  epochs=None, seed=None, criterion='c'):
 
         if n_max is None:
@@ -29,8 +29,8 @@ class SOMLHS:
         if epochs is None:
             epochs = [70, 200]
 
-        if lp is None:
-            lp = [0.05, 0.5]
+        if ld is None:
+            ld = [0.05, 0.5]
 
         if seed is None:
             seed = [1, 200000]
@@ -40,14 +40,14 @@ class SOMLHS:
         self.eb = np.array(eb)
         self.ds_beta = np.array(ds_beta)
         self.eps_ds = np.array(eps_ds)
-        self.lp = np.array(lp)
+        self.ld = np.array(ld)
         self.epochs = np.array(epochs)
         self.seed = np.array(seed)
 
         self.limits = np.array([self.n_max, self.at, self.eb, self.ds_beta, self.eps_ds,
-                                self.lp, self.epochs, self.seed])
+                                self.ld, self.epochs, self.seed])
         self.curr_sampling = []
-        self.params_names = ['n_max', 'at', 'eb', 'ds_beta', 'eps_ds', 'lp', 'epochs', 'seed']
+        self.params_names = ['n_max', 'at', 'eb', 'ds_beta', 'eps_ds', 'ld', 'epochs', 'seed']
 
         self.criterion = criterion
         self.lhs = LHS(self.limits, self.criterion)
@@ -78,9 +78,9 @@ class SOMLHS:
             self.curr_sampling['eps_ds'] = self.custom_distribution(self.eps_ds, samples,
                                                                     param=kwargs.get('custom_dist_eps_ds'))
 
-        if kwargs.get('custom_dist_lp') == 'exp' or kwargs.get('custom_dist_lp') == 'exp_inv':
-            self.curr_sampling['lp'] = self.custom_distribution(self.lp, samples,
-                                                                param=kwargs.get('custom_dist_lp'))
+        if kwargs.get('custom_dist_ld') == 'exp' or kwargs.get('custom_dist_ld') == 'exp_inv':
+            self.curr_sampling['ld'] = self.custom_distribution(self.ld, samples,
+                                                                param=kwargs.get('custom_dist_ld'))
 
         if kwargs.get('custom_dist_epochs') is None or kwargs.get('custom_dist_epochs') == 'default':
             self.curr_sampling['epochs'] = self.curr_sampling['epochs'].round().astype('int32')
@@ -117,9 +117,9 @@ class SOMLHS:
 class FullModelLHS(SOMLHS):
 
     def __init__(self, lr_cnn=None, n_conv=None, som_in=None, max_pool=None, max_pool2d_size=None, filters_pow=None,
-                 kernel_size=None, n_max=None, at=None, eb=None, ds_beta=None, eps_ds=None, lp=None, epochs=None,
+                 kernel_size=None, n_max=None, at=None, eb=None, ds_beta=None, eps_ds=None, ld=None, epochs=None,
                  seed=None, criterion='c'):
-        super(FullModelLHS, self).__init__(n_max, at, eb, ds_beta, eps_ds, lp, epochs, seed, criterion)
+        super(FullModelLHS, self).__init__(n_max, at, eb, ds_beta, eps_ds, ld, epochs, seed, criterion)
 
         if lr_cnn is None:
             lr_cnn = [0.00001, 0.1]
@@ -214,7 +214,7 @@ if __name__ == '__main__':
     lhs = FullModelLHS()
     dists = [None, 'exp', 'exp_inv']
 
-    params_names = ['n_max', 'at', 'eb', 'ds_beta', 'eps_ds', 'lp', 'epochs', 'seed', 'lr_cnn', 'n_conv', 'som_in',
+    params_names = ['n_max', 'at', 'eb', 'ds_beta', 'eps_ds', 'ld', 'epochs', 'seed', 'lr_cnn', 'n_conv', 'som_in',
                     'max_pool', 'max_pool2d_size', 'filters_pow', 'kernel_size']
 
     # for i in range(len(params_names)):
@@ -224,7 +224,7 @@ if __name__ == '__main__':
                        custom_dist_eb=dist,
                        custom_dist_ds_beta=dist,
                        custom_dist_eps_ds=dist,
-                       custom_dist_lp=dist,
+                       custom_dist_ld=dist,
                        custom_dist_epochs=dist,
                        custom_dist_seed=dist,
                        custom_dist_lr_cnn=dist,

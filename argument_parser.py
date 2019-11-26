@@ -12,8 +12,10 @@ def argument_parser():
     parser.add_argument('--eval', action='store_true', help='enables evaluation')
     parser.add_argument('--eval-interval', type=int, default=32, help='Evaluation Interval')
 
-    parser.add_argument('--root', type=str, default='raw-datasets/', help='Dataset Root folder')
+    parser.add_argument('--disable-tensorboard', action='store_true', help='Disables Tensorboard')
     parser.add_argument('--tensorboard-root', type=str, default='tensorboard/', help='Tensorboard Root folder')
+
+    parser.add_argument('--root', type=str, default='raw-datasets/', help='Dataset Root folder')
     parser.add_argument('--dataset', type=str, default='mnist', help='Dataset Name')
     parser.add_argument('--out-folder', type=str, default='results/', help='Folder to output results')
     parser.add_argument('--batch-size', type=int, default=2, help='input batch size')

@@ -19,7 +19,7 @@ def run_lhs_som(filename, lhs_samples=1):
                  eb=[0.0001, 0.01],
                  ds_beta=[0.001, 0.5],
                  eps_ds=[0.01, 0.1],
-                 lp=[0.05, 0.5],
+                 ld=[0.05, 0.5],
                  epochs=[1, 3],
                  seed=[1, 200000])
 
@@ -42,7 +42,7 @@ def run_lhs_full_model(filename, lhs_samples=1):
                        eb=[0.0001, 0.005],
                        ds_beta=[0.001, 0.5],
                        eps_ds=[0.01, 0.1],
-                       lp=[0.05, 0.5],
+                       ld=[0.05, 0.5],
                        epochs=[70, 200],
                        seed=[1, 200000])
 
@@ -63,13 +63,16 @@ if __name__ == '__main__':
     if not os.path.exists(os.path.dirname(out_folder)):
         os.makedirs(os.path.dirname(out_folder), exist_ok=True)
 
-    tensorboard_root = args.tensorboard_root
-    if not os.path.exists(os.path.dirname(tensorboard_root)):
-        os.makedirs(os.path.dirname(tensorboard_root), exist_ok=True)
+    writer = None
+    if not args.disable_tensorboard:
+        tensorboard_root = args.tensorboard_root
+        if not os.path.exists(os.path.dirname(tensorboard_root)):
+            os.makedirs(os.path.dirname(tensorboard_root), exist_ok=True)
 
-    tensorboard_folder = join(tensorboard_root, datetime.now().strftime('%Y-%m-%d-%H:%M:%S'))
-    writer = SummaryWriter(tensorboard_folder)
-    print("tensorboard --logdir=" + tensorboard_folder)
+        tensorboard_folder = join(tensorboard_root,
+                                  out_folder.split("/")[1] + "_" +datetime.now().strftime('%Y-%m-%d-%H:%M:%S'))
+        writer = SummaryWriter(tensorboard_folder)
+        print("tensorboard --logdir=" + tensorboard_folder)
 
     use_cuda = torch.cuda.is_available() and args.cuda
 

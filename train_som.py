@@ -26,7 +26,7 @@ def train_som(root, dataset_path, parameters, device, use_cuda, workers, out_fol
                   ds_beta=param_set.ds_beta,
                   eb=param_set.eb,
                   eps_ds=param_set.eps_ds,
-                  lp=param_set.lp,
+                  ld=param_set.ld,
                   device=device)
         som_epochs = param_set.epochs
 
@@ -59,7 +59,7 @@ def train_som(root, dataset_path, parameters, device, use_cuda, workers, out_fol
             clustering_errors.append(ce)
             print('{} \t exp_id {} \tCE: {:.3f}'.format(dataset_path, param_set.Index, ce))
 
-    if evaluate:
+    if evaluate and summ_writer is not None:
         clustering_errors = np.array(clustering_errors)
         plots.plot_tensorboard_x_y(parameters, 'CE', clustering_errors, summ_writer, dataset_path.split(".arff")[0])
 

@@ -8,7 +8,7 @@ import re
 
 class SOM(nn.Module):
 
-    def __init__(self, input_dim, n_max=20, eb=0.1, at=0.985, ds_beta=0.5, eps_ds=1., lp=0.1, device='cpu'):
+    def __init__(self, input_dim, n_max=20, eb=0.1, at=0.985, ds_beta=0.5, eps_ds=1., ld=0.1, device='cpu'):
         '''
         :param input_dim:
         :param n_max:
@@ -16,7 +16,7 @@ class SOM(nn.Module):
         :param ds_beta:
         :param eb:
         :param eps_ds:
-        :param lp:
+        :param ld:
         :param use_cuda:
         '''
 
@@ -28,7 +28,7 @@ class SOM(nn.Module):
         self.at = at
         self.ds_beta = ds_beta
         self.eps_ds = eps_ds
-        self.lp = lp
+        self.ld = ld
 
         self.device = torch.device(device)
 
@@ -135,7 +135,7 @@ class SOM(nn.Module):
         '''
         act_max, indexes_max = self.get_winners(input)
 
-        self.life -= self.lp
+        self.life -= self.ld
 
         bool_high_at = act_max >= self.at
         samples_high_at = input[bool_high_at]

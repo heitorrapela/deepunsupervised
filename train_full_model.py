@@ -52,7 +52,7 @@ def train_full_model(root, dataset_path, parameters, device, use_cuda, out_folde
                     eb=param_set.eb,
                     ds_beta=param_set.ds_beta,
                     eps_ds=param_set.eps_ds,
-                    lp=param_set.lp,
+                    ld=param_set.ld,
                     device=device)
 
         manual_seed = param_set.seed
@@ -116,9 +116,10 @@ def train_full_model(root, dataset_path, parameters, device, use_cuda, out_folde
                                                      metrics.cluster.predict_to_clustering_error(true_labels,
                                                                                                  predict_labels)))
 
-                    summ_writer.add_scalar('/NMI', nmi, epoch)
-                    summ_writer.add_scalar('/ARI', ari, epoch)
-                    summ_writer.add_scalar('/Acc', clus_acc, epoch)
+                    if summ_writer is not None:
+                        summ_writer.add_scalar('/NMI', nmi, epoch)
+                        summ_writer.add_scalar('/ARI', ari, epoch)
+                        summ_writer.add_scalar('/Acc', clus_acc, epoch)
 
                 if print_debug:
                     print('[{0:6d}/{1:6d}]\t'
@@ -144,7 +145,9 @@ def train_full_model(root, dataset_path, parameters, device, use_cuda, out_folde
 
                 centers, relevances, ma = model.som.get_prototypes()
                 som_plotter.plot_data(samples, t, centers.cpu(), relevances.cpu() * 0.1)
-                summ_writer.add_scalar('Nodes', len(centers), epoch)
+
+                if summ_writer is not None:
+                    summ_writer.add_scalar('Nodes', len(centers), epoch)
 
                 # for center in centers:
                 #     t = np.append(t, [10], axis=0)
@@ -154,7 +157,8 @@ def train_full_model(root, dataset_path, parameters, device, use_cuda, out_folde
                 # tsne_plotter.plot_data(embedding, t, None, None)
 
             print("Epoch: %d avg_loss: %.6f\n" % (epoch, avg_loss / s))
-            summ_writer.add_scalar('Loss/train', avg_loss / s, epoch)
+            if summ_writer is not None:
+                summ_writer.add_scalar('Loss/train', avg_loss / s, epoch)
 
         #  Need to change train loader to test loader...
         model.eval()
