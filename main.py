@@ -96,7 +96,7 @@ if __name__ == '__main__':
     n_max = args.nmax
 
     if args.som_only:
-        params_file_som = args.params_file if args.params_file is not None else "arguments/default_som.lhs"
+        params_file_som = args.params_file if args.params_file is not None else "arguments/default_som_ld.lhs"
 
         if args.lhs:
             parameters = run_lhs_som(params_file_som, args.lhs_samples)
@@ -122,7 +122,7 @@ if __name__ == '__main__':
                           evaluate=args.eval, summ_writer=writer, coil20_unprocessed=coil20_unprocessed)
 
     else:
-        params_file_full = args.params_file if args.params_file is not None else "arguments/default_full_model.lhs"
+        params_file_full = args.params_file if args.params_file is not None else "arguments/default_full_model_ld.lhs"
 
         if args.lhs:
             parameters = run_lhs_full_model(params_file_full, args.lhs_samples)
