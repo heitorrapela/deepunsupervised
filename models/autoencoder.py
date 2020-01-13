@@ -8,7 +8,7 @@ from models.som import SOM
 class AutoEncoderSOM(nn.Module):
     def __init__(self, d_in=1, hw_in=28, som_input=2,
                  n_max=20, at=0.985, eb=0.1, ds_beta=0.5, eps_ds=1., ld=0.05, device='cpu'):
-        super(Net, self).__init__(),
+        super(AutoEncoderSOM, self).__init__(),
 
         self.som_input_size = 16*20*20 #som_input
         self.d_in = d_in

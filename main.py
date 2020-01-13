@@ -3,6 +3,7 @@
 from argument_parser import argument_parser
 from train_som import train_som
 from train_full_model import train_full_model
+from train_autoencoder_model import train_autoencoder_model
 import os
 
 import torch
@@ -120,6 +121,18 @@ if __name__ == '__main__':
                 train_som(root=root, dataset_path=train_path, parameters=parameters, device=device, use_cuda=use_cuda,
                           workers=args.workers, out_folder=out_folder, batch_size=batch_size, n_max=n_max,
                           evaluate=args.eval, summ_writer=writer, coil20_unprocessed=coil20_unprocessed)
+
+    elif args.autoencoder:
+      params_file_full = args.params_file if args.params_file is not None else "arguments/default_full_model_ld.lhs"
+
+      if args.lhs:
+          parameters = run_lhs_full_model(params_file_full, args.lhs_samples)
+      else:
+          parameters = utils.read_params(params_file_full)
+
+      train_autoencoder_model(root=root, dataset_path=dataset_path, parameters=parameters, device=device, use_cuda=use_cuda,
+                       out_folder=out_folder, debug=debug, n_samples=n_samples, lr_cnn=lr_cnn, batch_size=batch_size,
+                       summ_writer=writer, print_debug=print_debug, coil20_unprocessed=coil20_unprocessed)
 
     else:
         params_file_full = args.params_file if args.params_file is not None else "arguments/default_full_model_ld.lhs"

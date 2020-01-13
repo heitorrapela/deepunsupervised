@@ -28,6 +28,8 @@ def argument_parser():
     parser.add_argument('--params-file', default=None, help='Parameters')
 
     parser.add_argument('--som-only', action='store_true', help='Som-Only Mode')
+    parser.add_argument('--autoencoder', action='store_true', help='Autoencoder Mode')
+
     parser.add_argument('--debug', action='store_true', help='Enables debug mode')
     parser.add_argument('--coil20-unprocessed', action='store_true', help='Loads COIL-20 Unprocessed')
     parser.add_argument('--n-samples', type=int, default=100, help='Dataset Number of Samples')
